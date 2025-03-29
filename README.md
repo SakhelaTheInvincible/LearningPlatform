@@ -24,8 +24,7 @@ Before running the project, ensure you have installed:
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/my-fullstack-app.git
-cd my-fullstack-app
+git clone https://github.com/SakhelaTheInvincible/LearningPlatform.git
 
 # Navigate to backend directory
 cd backend
