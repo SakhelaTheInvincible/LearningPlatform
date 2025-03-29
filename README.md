@@ -22,7 +22,7 @@ Before running the project, ensure you have installed:
 
 ## 🚀 Setup
 
-### 1. Clone the repository
+### Running The Code
 ```bash
 git clone https://github.com/SakhelaTheInvincible/LearningPlatform.git
 
@@ -40,10 +40,12 @@ source venv/bin/activate
 
 # Install dependencies
 pip install django djangorestframework psycopg2-binary python-dotenv django-cors-headers
+```
 
-# Set up database (ensure PostgreSQL is running)
-# Edit backend/settings.py with your DB credentials or use .env
+### Set up database (ensure PostgreSQL is running)
+Edit backend/settings.py with your DB credentials and ensure that database name is "learning"
 
+```bash
 # Run migrations
 python manage.py migrate
 
@@ -66,3 +68,4 @@ yarn install
 npm run dev
 # or
 yarn dev
+```
