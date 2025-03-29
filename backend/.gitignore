@@ -1,0 +1,10 @@
+# Django
+*.sqlite3
+*.pyc
+__pycache__/
+staticfiles/
+media/
+migrations/
+.env
+local_settings.py
+db.sqlite3
