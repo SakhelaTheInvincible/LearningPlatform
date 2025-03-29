@@ -1,3 +1,13 @@
+# Backend .gitignore
+
+# Virtual environment
+venv/
+.env/
+venv*/
+.env*/
+*.venv
+ENV/
+
 # Django
 *.sqlite3
 *.pyc
@@ -8,3 +18,17 @@ migrations/
 .env
 local_settings.py
 db.sqlite3
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs and databases
+*.log
+*.bak
+*.pid
+
+# Coverage reports
+.co
