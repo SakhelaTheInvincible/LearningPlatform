@@ -22,6 +22,8 @@ Before running the project, ensure you have installed:
 
 ## 🚀 Setup
 
+copy the `.env.example` file to `.env` and fill in the required environment variables.
+
 ### Running The Code
 ```bash
 git clone https://github.com/SakhelaTheInvincible/LearningPlatform.git
@@ -39,7 +41,7 @@ venv\Scripts\activate
 source venv/bin/activate
 
 # Install dependencies
-pip install django djangorestframework psycopg2-binary python-dotenv django-cors-headers
+pip install django djangorestframework psycopg2-binary python-dotenv django-cors-headers openai
 ```
 
 ### Set up database (ensure PostgreSQL is running)
@@ -47,6 +49,7 @@ Edit backend/settings.py with your DB credentials and ensure that database name 
 
 ```bash
 # Run migrations
+python manage.py makemigrations
 python manage.py migrate
 
 # Create superuser (optional for admin access)
