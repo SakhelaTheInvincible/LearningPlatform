@@ -1,6 +1,8 @@
 "use client"
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import toast from "react-hot-toast";
+import AnimatedWrapper from "../components/layout/AnimatedWrapper";
 
 export default function Home() {
   const [message, setMessage] = useState('Loading...')
@@ -17,10 +19,10 @@ export default function Home() {
   }, [])
 
   return (
-    <div>
+    <AnimatedWrapper>
       <h1>Fullstack App</h1>
       <p>Backend says: {message}</p>
       {error && <p style={{ color: 'red' }}>Error: {error}</p>}
-    </div>
+    </AnimatedWrapper>
   )
 }
