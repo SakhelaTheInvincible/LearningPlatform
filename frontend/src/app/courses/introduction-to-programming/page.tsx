@@ -50,7 +50,7 @@ const courses = [
   },
 ];
 
-export default function CoursesPage() {
+export default function introduction_to_programming() {
   return (
     <div className="min-h-screen bg-white">
       <Header />
@@ -65,7 +65,7 @@ export default function CoursesPage() {
             {courses.map((course) => (
               <Link
                 key={course.id}
-                href={`/courses/${course.courseName}`}
+                href={`introduction-to-programming/week/1`}
                 className="group"
               >
                 <div className="bg-white rounded-2xl shadow overflow-hidden transition-transform transform group-hover:scale-105 duration-300 ease-in-out cursor-pointer">
