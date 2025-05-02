@@ -19,6 +19,9 @@ interface CourseInfo {
   modules: string[];
 }
 
+
+
+
 export default function CoursePage({ course }: { course: CourseInfo }) {
   const [activeTab, setActiveTab] = useState<"about" | "modules">("about");
 

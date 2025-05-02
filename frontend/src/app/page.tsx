@@ -14,7 +14,7 @@ export default function Home() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:8000/api/hello/")
+      .get("http://localhost:8000/")
       .then((response) => {
         setMessage(response.data.message);
       })

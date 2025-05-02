@@ -2,18 +2,32 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 class Course(models.Model):
-    name = models.CharField(max_length=100, unique=True)
+
+    title = models.CharField(max_length=100, unique=True)
     duration_weeks = models.PositiveSmallIntegerField(
         default=14,
         validators=[MinValueValidator(1), MaxValueValidator(20)]
     )
+    description = models.TextField()
+
+    level = models.CharField(max_length=50)
+    estimated_time = models.PositiveIntegerField()
+    image = models.ImageField(upload_to='courses/',blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        ordering = ['title']
+        indexes = [
+            models.Index(fields=['title']),
+        ]
+        
     def __str__(self):
         return self.name
+    
 
 class Week(models.Model):
+    
     course = models.ForeignKey(
         Course, 
         on_delete=models.CASCADE, 
@@ -22,8 +36,7 @@ class Week(models.Model):
     week_number = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(1)]
     )
-    material = models.TextField()
-    summarized_material = models.TextField()
+    ## 1 or 2 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -33,9 +46,30 @@ class Week(models.Model):
         indexes = [
             models.Index(fields=['course', 'week_number']),
         ]
-
+    
     def __str__(self):
         return f"Week {self.week_number} of {self.course.name}"
+
+class Material(models.Model):
+    title = models.CharField(max_length=50)
+    description = models.TextField()
+    material = models.TextField() ## this is extracted text for ai client 
+    summarized_material = models.TextField() 
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    week = models.ForeignKey(
+        Week,
+        on_delete=models.CASCADE,
+        related_name='materials'
+        ) 
+    class Meta:
+        ordering = ['week', 'title']
+        indexes = [
+            models.Index(fields=['week', 'title']),
+        ]
+
+    def __str__(self):
+        return f"{self.name} - Week {self.week.week_number} ({self.week.course.name})"
 
 class Question(models.Model):
     DIFFICULTY_CHOICES = [
@@ -73,6 +107,8 @@ class Question(models.Model):
         indexes = [
             models.Index(fields=['week', 'difficulty']),
         ]
-
+    @property
     def __str__(self):
         return f"{self.get_difficulty_display()} question for Week {self.week.week_number} of {self.week.course.name}"
+
+

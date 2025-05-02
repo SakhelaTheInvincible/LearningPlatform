@@ -3,54 +3,28 @@ import Link from "next/link";
 import Image from "next/image";
 import Header from "@/src/components/Header";
 
-const courses = [
-  {
-    id: 1,
-    title: "Introduction to Programming",
-    courseName: "introduction-to-programming",
-    description: "Build a strong foundation in programming using Java.",
-    level: "Beginner",
-    image: "/courses/programming.jpg",
-  },
-  {
-    id: 2,
-    title: "Problem Solving",
-    courseName: "problem-solving",
-    description:
-      "Master solving problems using algorithms and data structures.",
-    level: "Intermediate",
-    image: "/courses/problem-solving.jpg",
-  },
-  {
-    id: 3,
-    title: "Databases - 1",
-    courseName: "databases-1",
-    description:
-      "Understand relational databases, SQL, and data modeling for efficient data management.",
-    level: "Intermediate",
-    image: "/courses/databases.jpg",
-  },
-  {
-    id: 4,
-    title: "Scripting Languages",
-    courseName: "scripting-languages",
-    description:
-      "Explore scripting with Python and JavaScript to automate tasks and build practical tools.",
-    level: "Intermediate",
-    image: "/courses/scripting.jpg",
-  },
-  {
-    id: 5,
-    title: "Backend Development",
-    courseName: "backend-development",
-    description:
-      "Master server-side development, APIs, and databases to power web applications.",
-    level: "Advanced",
-    image: "/courses/backend.jpg",
-  },
-];
+interface Course {
+  id: number;
+  title: string;
+  slug: string;
+  description: string;
+  level: string;
+  image: string;
+  duration_weeks: number;
+  estimated_time: number;
+}
 
-export default function CoursesPage() {
+async function getCourses(): Promise<Course[]> {
+  const res = await fetch('http://127.0.0.1:8000/api/courses/');
+  if (!res.ok) {
+    throw new Error('Failed to fetch courses');
+  }
+  return res.json();
+}
+
+export default async function CoursesPage() {
+  const courses = await getCourses();
+
   return (
     <div className="min-h-screen bg-white">
       <Header />
@@ -65,12 +39,12 @@ export default function CoursesPage() {
             {courses.map((course) => (
               <Link
                 key={course.id}
-                href={`/courses/${course.courseName}`}
+                href={`/courses/${course.slug}`}
                 className="group"
               >
                 <div className="bg-white rounded-2xl shadow overflow-hidden transition-transform transform group-hover:scale-105 duration-300 ease-in-out cursor-pointer">
                   <Image
-                    src={course.image}
+                    src={course.image || "/courses/default.jpg"}
                     alt={course.title}
                     width={400}
                     height={200}
