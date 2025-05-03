@@ -1,4 +1,69 @@
-export default function SignupPage() {
+"use client"
+import { equal } from 'assert';
+import axios from 'axios';
+import { useState, ChangeEvent, FormEvent } from 'react';
+// Define type for user types
+type UserType = 'student' | 'professor' | 'admin';
+
+// Define form state interface
+interface UserFormState {
+  username: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  profile_picture: string | null;
+  password: string;
+  user_type: UserType;
+}
+
+const RegistrationForm = () => {
+  // Initialize form with default values
+  const [form, setForm] = useState<UserFormState>({
+    username: '',
+    first_name: '',
+    last_name: '',
+    email: '',
+    profile_picture: null,
+    password: '',
+    user_type: 'student'
+  });
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  // Handle input changes
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+  
+    axios.get(`http://localhost:8000/api/users/${form.username}/`).then((response) => { 
+        if (response.status == 200)
+          setError('Username is already taken!');
+      
+    }).
+      catch((err) => {
+        // if we  catch error it inidicates that username is not present in db 
+      })
+       
+    axios.post('http://localhost:8000/api/signup/', form).then((response) => {
+        if (response.status === 201) {
+          setSuccess('Signup successful! You can now log in.');
+          setError('');
+        }
+    })
+      .catch((err) => { 
+        setError(err.response?.data?.message || 'An error occurred during signup');
+        setSuccess('');
+      })
+    
+  };
+
   return (
     <>
       <div className="flex min-h-screen h-screen flex-1 flex-col justify-center px-6 py-12 lg:px-8">
@@ -10,40 +75,62 @@ export default function SignupPage() {
         </div>
 
         <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-          <form className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label
+                htmlFor="username"
+                className="block text-sm font-medium leading-6 text-gray-900"
+              >
+                username
+              </label>
+              <div className="mt-2">
+                <input
+                  id="username"
+                  name="username"
+                  type="text"
+                  value={form.username}
+                  onChange={handleChange}
+                  required
+                  className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                />
+              </div>
+            </div>
+
             <div className="flex flex-row">
               <div className="mr-16">
                 <label
-                  htmlFor="text"
+                  htmlFor="first_name"
                   className="block text-sm font-medium leading-6 text-gray-900"
                 >
                   FirstName
                 </label>
                 <div className="mt-2">
                   <input
-                    id="text"
-                    name="text"
+                    id="first_name"
+                    name="first_name"
                     type="text"
+                    value={form.first_name}
+                    onChange={handleChange}
                     required
-                    autoComplete="text"
                     className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                   />
                 </div>
               </div>
               <div>
                 <label
-                  htmlFor="text"
+                  htmlFor="last_name"
                   className="block text-sm font-medium leading-6 text-gray-900"
                 >
                   LastName
                 </label>
                 <div className="mt-2">
                   <input
-                    id="text"
-                    name="text"
+                    id="last_name"
+                    name="last_name"
                     type="text"
+                    value={form.last_name}
+                    onChange={handleChange}
                     required
-                    autoComplete="text"
                     className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                   />
                 </div>
@@ -61,8 +148,9 @@ export default function SignupPage() {
                   id="email"
                   name="email"
                   type="email"
+                  value={form.email}
+                  onChange={handleChange}
                   required
-                  autoComplete="email"
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                 />
               </div>
@@ -82,8 +170,9 @@ export default function SignupPage() {
                   id="password"
                   name="password"
                   type="password"
+                  value={form.password}
+                  onChange={handleChange}
                   required
-                  autoComplete="current-password"
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                 />
               </div>
@@ -92,7 +181,7 @@ export default function SignupPage() {
             <div>
               <div className="flex items-center justify-between">
                 <label
-                  htmlFor="password"
+                  htmlFor="confirmPassword"
                   className="block text-sm font-medium leading-6 text-gray-900"
                 >
                   Repeat the Password
@@ -100,15 +189,35 @@ export default function SignupPage() {
               </div>
               <div className="mt-2">
                 <input
-                  id="password"
-                  name="password"
+                  id="confirmPassword"
+                  name="confirmPassword"
                   type="password"
                   required
-                  autoComplete="current-password"
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                 />
               </div>
             </div>
+
+            <div>
+              <label htmlFor="user_type" className="block text-sm font-medium leading-6 text-gray-900">
+                User Type
+              </label>
+              <div className="mt-2">
+                <select
+                  id="user_type"
+                  name="user_type"
+                  value={form.user_type}
+                  onChange={(e) => setForm({ ...form, user_type: e.target.value as UserType })}
+                  className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                >
+                  <option value="student">Student</option>
+                  <option value="professor">Professor</option>
+                </select>
+              </div>
+            </div>
+
+            {error && <div className="text-red-500 text-sm">{error}</div>}
+            {success && <div className="text-green-500 text-sm">{success}</div>}
 
             <div>
               <button
@@ -126,11 +235,13 @@ export default function SignupPage() {
               href="/login"
               className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500"
             >
-              sign in here
+              log in here
             </a>
           </p>
         </div>
       </div>
     </>
   );
-}
+};
+
+export default RegistrationForm;

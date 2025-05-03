@@ -2,13 +2,13 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from ai.services import generate_questions
-from api.models import Course, Week, Question
+from api.models import Course, Week, Question,User
 from api.serializers import CourseSerializer, QuestionSerializer
 from file_manager.file_manager import extract_text
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from rest_framework import generics
-from api.serializers import OnlyCourseSerializer
+from api.serializers import OnlyCourseSerializer,UserSerializer
 
 import os
 
@@ -17,6 +17,19 @@ import os
 class OnlyCourseListAPIView(generics.ListAPIView):
     queryset = Course.objects.all()
     serializer_class = OnlyCourseSerializer
+
+class UserCreateAPIView(generics.CreateAPIView):
+    serializer_class = UserSerializer
+
+class UserRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    lookup_field = 'username' 
+
+class UserListAPIView(generics.ListAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
 
 
 
