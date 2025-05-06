@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import api from "../../../lib/axios";
+import api from "../../../../lib/axios";
 
 export default function UploadPage() {
   const [course, setCourse] = useState({
@@ -22,7 +22,9 @@ export default function UploadPage() {
     material: null,
   });
 
-  const [connectionStatus, setConnectionStatus] = useState("Checking connection...");
+  const [connectionStatus, setConnectionStatus] = useState(
+    "Checking connection..."
+  );
 
   useEffect(() => {
     const testConnection = async () => {
@@ -59,7 +61,7 @@ export default function UploadPage() {
       const response = await api.post("/course/upload-course", course);
       alert("Course uploaded successfully!");
       // Store the course ID for material upload
-      setReadingMaterial(prev => ({ ...prev, courseId: response.data.id }));
+      setReadingMaterial((prev) => ({ ...prev, courseId: response.data.id }));
     } catch (err) {
       console.error("Error uploading course:", err);
       alert("Failed to upload course. Check console for details.");
@@ -85,10 +87,10 @@ export default function UploadPage() {
       await api.post(
         `/courses/${readingMaterial.courseId}/weeks/${readingMaterial.weekNumber}/materials/`,
         formData,
-        { 
-          headers: { 
-            "Content-Type": "multipart/form-data" 
-          } 
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         }
       );
       alert("Reading material uploaded successfully!");
