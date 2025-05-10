@@ -2,7 +2,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from ai.services import generate_questions
-from api.models import Course, Week, Question,User
+from api.models import Course, Week, Question, Material, User
 from api.serializers import CourseSerializer, QuestionSerializer
 from file_manager.file_manager import extract_text
 from django.core.files.storage import default_storage
@@ -31,11 +31,6 @@ class UserListAPIView(generics.ListAPIView):
     serializer_class = UserSerializer
 
 
-
-
-@api_view(['GET'])
-def hello_api_view(request):
-    return Response({"message": "Hello from Django API!"})
     
 @api_view(['GET', 'POST'])
 def course_view(request, course_id=None):
@@ -58,29 +53,49 @@ def course_view(request, course_id=None):
             return Response(
                 {"error": "Name and weeks are required"},
                 status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        course = Course.objects.create(
-            name=request.data['name'],
-            duration_weeks=len(request.data['weeks'])
         )
-        
+        course = Course.objects.create(
+            title=request.data['name'],
+            duration_weeks=len(request.data['weeks']),
+            estimated_time=50,
+            level='beginner',
+            description="amazing spiderman"
+        )
+            
         weeks = []
+        materials = []
         for week_num, week_data in enumerate(request.data['weeks'], start=1):
-            weeks.append(Week(
+            week = Week(
                 course=course,
-                week_number=week_num,
-                material=week_data.get('material', '')
+                week_number=week_num
+            )
+            weeks.append(week)
+            
+            materials.append(Material(
+                week=week,
+                title=f"Week {week_num} Material",
+                material=week_data.get('material', ''),
+                description=week_data.get('description', '')
             ))
         
-        Week.objects.bulk_create(weeks)
+        created_weeks = Week.objects.bulk_create(weeks)
+        
+        Material.objects.bulk_create(materials)
+        
+        # questions_count = 0
+        # for week in created_weeks:
+        #     result = generate_questions(week)
+        #     questions_count += result['questions_generated']
         
         return Response({
             "status": "success",
             "course_id": course.id,
-            "weeks_created": len(weeks)
+            "weeks_created": len(created_weeks),
+            "materials_created": len(materials),
+            "questions_generated": 0,
+            "message": "Course, materials, and questions created successfully"
         }, status=status.HTTP_201_CREATED)
-        
+    
 
 @api_view(['GET'])
 def get_week_view(request, course_id, week_number):
@@ -93,8 +108,8 @@ def get_week_view(request, course_id, week_number):
             "status": "success",
             "week": {
                 "number": week.week_number,
-                "material": week.material,
-                "summarized_material": week.summarized_material
+                "material": week.materials.material,
+                "summarized_material": week.materials.summarized_material
             },
             "count": len(serializer.data),
             "questions": serializer.data
@@ -111,24 +126,54 @@ def get_week_view(request, course_id, week_number):
 def generate_all_questions(request, course_id):
     try:
         course = Course.objects.get(id=course_id)
-        weeks = Week.objects.filter(course=course)
+        weeks = Week.objects.filter(course=course).select_related('material')
+        if not weeks.exists():
+            return Response(
+                {"error": "No weeks found for this course"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
         results = []
+        questions_count = 0
+        materials_updated = 0
         
         for week in weeks:
-            results.append({
-                "week": week.week_number,
-                **generate_questions(week)
-            })
+            try:
+                result = generate_questions(week)
+                results.append({
+                    "week": week.week_number,
+                    **result
+                })
+                questions_count += result['questions_generated']
+                materials_updated += 1
+            except Exception as e:
+                results.append({
+                    "week": week.week_number,
+                    "error": str(e),
+                    "status": "failed"
+                })
         
         return Response({
             "status": "success",
-            "results": results
+            "summary": {
+                "total_weeks_processed": len(weeks),
+                "weeks_succeeded": len([r for r in results if 'error' not in r]),
+                "weeks_failed": len([r for r in results if 'error' in r]),
+                "total_questions_generated": questions_count,
+                "total_materials_updated": materials_updated
+            },
+            "detailed_results": results
         }, status=status.HTTP_201_CREATED)
         
     except Course.DoesNotExist:
         return Response(
             {"error": "Course not found"},
             status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {"error": f"An unexpected error occurred: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 @api_view(['POST'])

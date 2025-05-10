@@ -5,23 +5,11 @@ from django.contrib.auth.models import AbstractUser
 
 
 class User(AbstractUser):
-    USER_TYPES = [
-        ('student', 'Student'),
-        ('professor', 'Professor'),
-        ('admin', 'Admin'),
-    ]
-    user_type = models.CharField(max_length=10, choices=USER_TYPES, default='student')
     profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
 
-    
-    def is_professor(self):
-        return self.user_type == 'professor'
-        
-    def is_student(self):
-        return self.user_type == 'student'
-    
     def is_admin(self):
-        return self.user_type == 'admin' or self.is_superuser
+        return self.is_superuser
+    
     def __str__(self) -> str:
         return  self.username
 
@@ -36,12 +24,6 @@ class Course(models.Model):
     level = models.CharField(max_length=50)
     estimated_time = models.PositiveIntegerField()
     image = models.ImageField(upload_to='courses/',blank=True,null=True)
-    professor = models.ForeignKey(
-        User,  
-        on_delete=models.CASCADE,
-        related_name='taught_courses',  # Changed from 'courses' to 'taught_courses'
-        limit_choices_to={'user_type__in': ['professor','admin']} 
-    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -65,12 +47,6 @@ class Week(models.Model):
     week_number = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(1)]
     )
-    professor = models.ForeignKey(
-        User, 
-        on_delete=models.CASCADE,
-        related_name='taught_weeks',  # Changed from 'courses' to 'taught_weeks'
-        limit_choices_to={'user_type': 'professor'}  # Only professors can be selected
-    )    ## 1 or 2 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -117,7 +93,9 @@ class Question(models.Model):
     QUESTION_TYPE_CHOICES = [
         ('open', 'Open-ended'),
         ('choice', 'Single Choice'),
-        ('multiple_choice', 'Multiple Choice')
+        ('multiple_choice', 'Multiple Choice'),
+        ('true_false', 'True or False'),
+        ('coding', 'Coding Challenge')
     ]
     
     week = models.ForeignKey(
