@@ -82,6 +82,20 @@ export default function Home() {
               >
                 Browse Courses
               </Link>
+              <div className="">
+                <button
+                  className="block w-full text-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                  onClick={() => {
+                    if (localStorage.getItem("token")) {
+                      localStorage.removeItem("token");
+                    } else {
+                      localStorage.setItem("token", "sometoken");
+                    }
+                  }}
+                >
+                  on/off local storage token for testing
+                </button>
+              </div>
             </div>
           </div>
         </div>
