@@ -1,19 +1,18 @@
 "use client";
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
-
+import api from "../../lib/axios";
 export default function SignupPage() {
   const router = useRouter();
-
   const [formData, setFormData] = useState({
-    usename: "",
+    username: "",
     first_name: "",
     last_name: "",
     email: "",
     password: "",
     repeatPassword: "",
   });
+  const [error, setError] = useState("");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -21,29 +20,17 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    setError("");
     if (formData.password !== formData.repeatPassword) {
       alert("Passwords do not match.");
       return;
     }
 
     try {
-      const response = await axios.post("http://localhost:8000/api/signup/", {
-        username: "",
-        first_name: formData.first_name,
-        last_name: formData.last_name,
-        email: formData.email,
-        profile_picture: null,
-        password: formData.password,
-      });
-
-      const token = response.data.token;
-      localStorage.setItem("token", token);
-      router.push("/"); // or redirect to /courses, /dashboard, etc.
-    } catch (error: any) {
-      alert(
-        "Signup failed: " + (error.response?.data?.detail || error.message)
-      );
+      await api.post("/signup/", formData);
+      router.push("/");
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Signup failed");
     }
   };
 
@@ -66,7 +53,7 @@ export default function SignupPage() {
               name="username"
               type="text"
               required
-              value={formData.usename}
+              value={formData.username}
               onChange={handleChange}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500"
             />
@@ -149,6 +136,8 @@ export default function SignupPage() {
             Sign up
           </button>
         </form>
+
+        {error && <div className="mt-4 text-center text-sm text-red-500">{error}</div>}
 
         <p className="mt-6 text-center text-sm text-gray-500">
           Already a member?{" "}

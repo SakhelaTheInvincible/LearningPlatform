@@ -19,10 +19,12 @@ class Course(models.Model):
         default=14,
         validators=[MinValueValidator(1), MaxValueValidator(20)]
     )
-    description = models.TextField()
-
-    level = models.CharField(max_length=50)
-    estimated_time = models.PositiveIntegerField()
+    description = models.TextField(blank=True, null=True)
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='users'
+    )
     image = models.ImageField(upload_to='courses/',blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

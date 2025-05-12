@@ -1,6 +1,6 @@
 digraph model_graph {
   // Dotfile by Django-Extensions graph_models
-  // Created: 2025-05-03 19:33
+  // Created: 2025-05-12 20:41
   // Cli Options: api
 
   fontname = "Roboto"
@@ -209,14 +209,6 @@ digraph model_graph {
   
   
     <TR><TD ALIGN="LEFT" BORDER="0">
-    <FONT FACE="Roboto">user_type</FONT>
-    </TD><TD ALIGN="LEFT">
-    <FONT FACE="Roboto">CharField</FONT>
-    </TD></TR>
-  
-  
-  
-    <TR><TD ALIGN="LEFT" BORDER="0">
     <FONT FACE="Roboto"><I>username</I></FONT>
     </TD><TD ALIGN="LEFT">
     <FONT FACE="Roboto"><I>CharField</I></FONT>
@@ -243,7 +235,7 @@ digraph model_graph {
   
   
     <TR><TD ALIGN="LEFT" BORDER="0">
-    <FONT FACE="Roboto"><B>professor</B></FONT>
+    <FONT FACE="Roboto"><B>user</B></FONT>
     </TD><TD ALIGN="LEFT">
     <FONT FACE="Roboto"><B>ForeignKey (id)</B></FONT>
     </TD></TR>
@@ -259,9 +251,9 @@ digraph model_graph {
   
   
     <TR><TD ALIGN="LEFT" BORDER="0">
-    <FONT FACE="Roboto">description</FONT>
+    <FONT COLOR="#7B7B7B" FACE="Roboto">description</FONT>
     </TD><TD ALIGN="LEFT">
-    <FONT FACE="Roboto">TextField</FONT>
+    <FONT COLOR="#7B7B7B" FACE="Roboto">TextField</FONT>
     </TD></TR>
   
   
@@ -275,25 +267,9 @@ digraph model_graph {
   
   
     <TR><TD ALIGN="LEFT" BORDER="0">
-    <FONT FACE="Roboto">estimated_time</FONT>
-    </TD><TD ALIGN="LEFT">
-    <FONT FACE="Roboto">PositiveIntegerField</FONT>
-    </TD></TR>
-  
-  
-  
-    <TR><TD ALIGN="LEFT" BORDER="0">
     <FONT COLOR="#7B7B7B" FACE="Roboto">image</FONT>
     </TD><TD ALIGN="LEFT">
     <FONT COLOR="#7B7B7B" FACE="Roboto">ImageField</FONT>
-    </TD></TR>
-  
-  
-  
-    <TR><TD ALIGN="LEFT" BORDER="0">
-    <FONT FACE="Roboto">level</FONT>
-    </TD><TD ALIGN="LEFT">
-    <FONT FACE="Roboto">CharField</FONT>
     </TD></TR>
   
   
@@ -334,14 +310,6 @@ digraph model_graph {
   
     <TR><TD ALIGN="LEFT" BORDER="0">
     <FONT FACE="Roboto"><B>course</B></FONT>
-    </TD><TD ALIGN="LEFT">
-    <FONT FACE="Roboto"><B>ForeignKey (id)</B></FONT>
-    </TD></TR>
-  
-  
-  
-    <TR><TD ALIGN="LEFT" BORDER="0">
-    <FONT FACE="Roboto"><B>professor</B></FONT>
     </TD><TD ALIGN="LEFT">
     <FONT FACE="Roboto"><B>ForeignKey (id)</B></FONT>
     </TD></TR>
@@ -575,13 +543,10 @@ digraph model_graph {
   [label=" abstract\ninheritance"] [arrowhead=empty, arrowtail=none, dir=both];
 
   api_models_Course -> api_models_User
-  [label=" professor (taught_courses)"] [arrowhead=none, arrowtail=dot, dir=both];
+  [label=" user (users)"] [arrowhead=none, arrowtail=dot, dir=both];
 
   api_models_Week -> api_models_Course
   [label=" course (weeks)"] [arrowhead=none, arrowtail=dot, dir=both];
-
-  api_models_Week -> api_models_User
-  [label=" professor (taught_weeks)"] [arrowhead=none, arrowtail=dot, dir=both];
 
   api_models_Material -> api_models_Week
   [label=" week (materials)"] [arrowhead=none, arrowtail=dot, dir=both];

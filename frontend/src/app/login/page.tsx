@@ -1,12 +1,12 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
+import api from "../../lib/axios";
 
 export default function LoginPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    email: "",
+    username: "",
     password: "",
   });
 
@@ -18,13 +18,17 @@ export default function LoginPage() {
     e.preventDefault();
 
     try {
-      const response = await axios.post("http://localhost:8000/api/login/", {
-        email: formData.email,
+      const response = await api.post("/token/", {
+        username: formData.username,
         password: formData.password,
       });
 
-      const token = response.data.token;
-      localStorage.setItem("token", token);
+      const access = response.data.access;
+      const refresh = response.data.refresh;
+
+      localStorage.setItem("access", access);
+      localStorage.setItem("refresh", refresh);
+
       router.push("/"); // Redirect to homepage or dashboard
     } catch (error: any) {
       alert("Login failed: " + (error.response?.data?.detail || error.message));
@@ -45,20 +49,20 @@ export default function LoginPage() {
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label
-                htmlFor="email"
+                htmlFor="username"
                 className="block text-sm font-medium text-gray-900"
               >
-                Email address
+                username 
               </label>
               <div className="mt-2">
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
+                  id="username"
+                  name="username"
+                  type="username"
+                  value={formData.username}
                   onChange={handleChange}
                   required
-                  autoComplete="email"
+                  autoComplete="username"
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                 />
               </div>

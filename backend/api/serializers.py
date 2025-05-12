@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Course, Week, Question, Material,User
+from django.contrib.auth.hashers import make_password, check_password
 
 class MaterialSerializer(serializers.ModelSerializer):
     class Meta:
@@ -9,15 +10,40 @@ class MaterialSerializer(serializers.ModelSerializer):
 ## signUp section
 
 
+class PasswordChangeSerializer(serializers.Serializer):
+    current_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)
+
+    def validate_current_password(self, value):
+        user = self.context['request'].user
+        if not check_password(value, user.password):
+            raise serializers.ValidationError("Current password is incorrect")
+        return value
+
+
 class UserSerializer(serializers.ModelSerializer):
-    user_type = serializers.ChoiceField(choices=[
-        ('student', 'Student'),
-        ('professor', 'Professor'),
-    ])    
     class Meta:
         model = User
-        fields = ['username', 'first_name', 'last_name', 'email','password','profile_picture','user_type']
+        fields = ['username', 'email', 'password',
+                  'first_name', 'last_name', 'profile_picture']
+        extra_kwargs = {'password': {'write_only': True}}
 
+    def create(self, validated_data):
+        validated_data['password'] = make_password(validated_data['password'])
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        # Hash password if it's in the validated data
+        if 'password' in validated_data:
+            validated_data['password'] = make_password(
+                validated_data['password'])
+
+        # Update all fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.save()
+        return instance
 
 class WeekSerializer(serializers.ModelSerializer):
     materials = MaterialSerializer(many=True, read_only=True)
