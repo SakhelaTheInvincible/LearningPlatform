@@ -1,7 +1,7 @@
 import json
-from api.models import Course, Question, Week
+from api.models import Course, Question, Week, Material
 from .client import get_ai_client
-from .constants import QUESTION_GEN_TEMPLATE, MAX_CHUNK_SIZE, DIFFICULTY_LEVEL, DIFFICULTIES, QUESTIONS_PER_LEVEL, SUMMARY_TEMPLATE, DIFFICULTY_MAPPING
+from .constants import QUESTION_GEN_TEMPLATE, MAX_CHUNK_SIZE, QUESTION_TYPE_CHOICES, DIFFICULTIES, QUESTIONS_PER_LEVEL, SUMMARY_TEMPLATE, DIFFICULTY_MAPPING
 
 import textwrap
 from typing import Dict, List, Tuple
@@ -32,7 +32,8 @@ def process_material_chunks(material: str, subject: str, week_num: int, question
                 num_questions=QUESTIONS_PER_LEVEL,
                 difficulty=difficulty,
                 context_hint=context_hint,
-                chunk=chunk_summary
+                chunk=chunk_summary,
+                question_types=QUESTION_TYPE_CHOICES
             )
             
             try:
@@ -59,32 +60,39 @@ def process_material_chunks(material: str, subject: str, week_num: int, question
     return "\n\n".join(full_summary), all_questions
 
 def generate_questions(week: Week, questions_per_level: int = QUESTIONS_PER_LEVEL):
+    try:
+        material = week.material
+    except Material.DoesNotExist:
+        raise ValueError(f"No material found for week {week.week_number}")
+    
     summary, raw_questions = process_material_chunks(
-        material=week.material,
-        subject=week.course.name,
+        material=material.material,
+        subject=week.course.title,
         week_num=week.week_number,
         questions_per_level=questions_per_level
     )
     
-    week.summarized_material = summary
-    week.save()
+    # Update the material's summarized content
+    material.summarized_material = summary
+    material.save()
     
+    # Prepare questions for bulk creation
     questions_to_create = []
     for q in raw_questions:
-        question_type = q.get('type', '')[:15]
-        
         questions_to_create.append(Question(
             week=week,
             difficulty=DIFFICULTY_MAPPING[q['difficulty']],
-            question_type=question_type,
+            question_type=q.get('type', '')[:20],
             question_text=q['question'],
             answer=q['answer'],
-            explanation=q['explanation']
+            explanation=q['explanation'],
         ))
     
-    Question.objects.bulk_create(questions_to_create)
+    # Bulk create questions
+    created_questions = Question.objects.bulk_create(questions_to_create)
     
     return {
         "summary_length": len(summary),
-        "questions_generated": len(questions_to_create),
+        "questions_generated": len(created_questions),
+        "material_updated": material.id,
     }

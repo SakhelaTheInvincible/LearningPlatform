@@ -81,12 +81,13 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'learning_platform',
-        'USER': 'davit_bandzeladze',
-        'PASSWORD': 'password',
+        'NAME': 'learning',
+        'USER': 'sabatchumburidze',
+        'PASSWORD': '',
         'HOST': 'localhost',
         'PORT': '5432',
     }
