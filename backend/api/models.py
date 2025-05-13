@@ -66,7 +66,7 @@ class Material(models.Model):
     title = models.CharField(max_length=50)
     description = models.TextField()
     material = models.TextField() ## this is extracted text for ai client 
-    summarized_material = models.TextField() 
+    summarized_material = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     week = models.ForeignKey(

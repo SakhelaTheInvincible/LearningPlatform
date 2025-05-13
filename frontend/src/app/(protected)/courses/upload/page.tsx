@@ -1,7 +1,7 @@
 "use client";
 import { Dialog, Transition } from "@headlessui/react";
 import { Fragment, useState } from "react";
-import axios from "axios";
+import api from "@/src/lib/axios";
 
 export default function UploadPage() {
   const [isCourseDialogOpen, setCourseDialogOpen] = useState(true);
@@ -20,8 +20,8 @@ export default function UploadPage() {
   const handleCourseUpload = async () => {
     const formData = new FormData();
     formData.append("title", courseTitle);
+    formData.append("duration_weeks", duration.toString());
     formData.append("description", description);
-    formData.append("weeks", duration.toString());
     if (image) formData.append("image", image);
 
     // uncomment to check
@@ -30,7 +30,10 @@ export default function UploadPage() {
     // setWeeksDialogOpen(true);
 
     try {
-      await axios.post("/api/course/upload", formData);
+      await api.post("/course/upload/", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+
+      });
       setWeeks(duration);
       setCourseDialogOpen(false);
       setWeeksDialogOpen(true);
@@ -53,10 +56,9 @@ export default function UploadPage() {
     formData.append("description", materialDescription);
 
     try {
-      await axios.post(
-        `/api/course/upload/${courseTitle}/week/${selectedWeek}`,
-        formData
-      );
+      await api.post(`/course/upload/${courseTitle}/week/${selectedWeek}/`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
       setMaterialDialogOpen(false);
       setMaterial(null);
       setMaterialTitle("");

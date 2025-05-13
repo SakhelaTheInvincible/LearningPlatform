@@ -4,8 +4,12 @@ import Header from "@/src/components/Header";
 import Image from "next/image";
 import ProfileInfoCard from "@/src/components/ProfileInfoCard";
 import api from "@/src/lib/axios";
+import { useRouter } from "next/navigation";
+
 
 export default function ProfilePage() {
+  const router = useRouter();
+
   const [user, setUser] = useState({
     username: "",
     email: "",
@@ -34,6 +38,7 @@ export default function ProfilePage() {
         setUser(res.data);
       } catch (err: any) {
         setError("Failed to load user profile");
+        router.replace('/login')
       } finally {
         setLoading(false);
       }
