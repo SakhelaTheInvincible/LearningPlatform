@@ -6,14 +6,17 @@ import { Transition } from "@headlessui/react";
 import { ChevronRightIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 import { usePathname } from "next/navigation";
 
-const weeks = [1, 2, 3, 4, 5];
-
-export default function SidebarDropdown() {
+export default function SidebarDropdown({
+  duration_weeks,
+}: {
+  duration_weeks: number;
+}) {
   const [open, setOpen] = useState(true);
   const pathname = usePathname();
 
   // Get current week from the pathname
   const currentWeek = parseInt(pathname.split("/").pop() || "0");
+  const weeks = Array.from({ length: duration_weeks }, (_, i) => i + 1);
 
   return (
     <div className="w-[200px] rounded-md border border-transparent hover:border-indigo-600">

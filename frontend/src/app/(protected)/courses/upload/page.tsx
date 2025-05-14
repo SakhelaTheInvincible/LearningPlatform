@@ -16,6 +16,7 @@ export default function UploadPage() {
   const [material, setMaterial] = useState<File | null>(null);
   const [materialTitle, setMaterialTitle] = useState("");
   const [materialDescription, setMaterialDescription] = useState("");
+  const [uploadedWeeks, setUploadedWeeks] = useState<Set<number>>(new Set());
 
   const handleCourseUpload = async () => {
     const formData = new FormData();
@@ -32,7 +33,6 @@ export default function UploadPage() {
     try {
       await api.post("/course/upload/", formData, {
         headers: { "Content-Type": "multipart/form-data" },
-
       });
       setWeeks(duration);
       setCourseDialogOpen(false);
@@ -56,13 +56,18 @@ export default function UploadPage() {
     formData.append("description", materialDescription);
 
     try {
-      await api.post(`/course/upload/${courseTitle}/week/${selectedWeek}/`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      await api.post(
+        `/course/upload/${courseTitle}/week/${selectedWeek}/`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
       setMaterialDialogOpen(false);
       setMaterial(null);
       setMaterialTitle("");
       setMaterialDescription("");
+      setUploadedWeeks((prev) => new Set(prev).add(selectedWeek));
     } catch (err) {
       console.error("Error uploading material:", err);
     }
@@ -215,9 +220,14 @@ export default function UploadPage() {
                         <span>Week {index + 1}</span>
                         <button
                           onClick={() => openMaterialUpload(index + 1)}
-                          className="rounded bg-indigo-500 px-3 py-1 text-white hover:bg-indigo-400"
+                          disabled={uploadedWeeks.has(index + 1)}
+                          className={`rounded px-3 py-1 text-white w-[100px] ${
+                            uploadedWeeks.has(index + 1)
+                              ? "bg-gray-400 cursor-not-allowed"
+                              : "bg-indigo-500 hover:bg-indigo-400"
+                          }`}
                         >
-                          Upload
+                          {uploadedWeeks.has(index + 1) ? "Uploaded" : "Upload"}
                         </button>
                       </div>
                     ))}
