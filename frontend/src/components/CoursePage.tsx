@@ -1,10 +1,12 @@
 "use client";
-import { useState } from "react";
+
+import { useEffect, useState } from "react";
 import Header from "@/src/components/Header";
 import Breadcrumbs from "@/src/components/Breadcrumbs";
 import Image from "next/image";
 import Link from "next/link";
 import { StarIcon, HandThumbUpIcon } from "@heroicons/react/24/solid";
+import api from "@/src/lib/axios";
 
 interface CourseInfo {
   title: string;
@@ -13,18 +15,57 @@ interface CourseInfo {
   weeks: number;
   difficulty: "Beginner" | "Intermediate" | "Advanced" | "Expert";
   estimatedTime: string;
-  rating: number; // 1 to 5
-  likePercentage: number; // 0 to 100
-  slug: string; // for "Go to Course" link
+  rating: number;
+  likePercentage: number;
+  slug: string;
   modules: string[];
 }
 
-
-
-
-export default function CoursePage({ course }: { course: CourseInfo }) {
+export default function CoursePage({ slug }: { slug: string }) {
   const [activeTab, setActiveTab] = useState<"about" | "modules">("about");
+  const [course, setCourse] = useState<CourseInfo | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    async function fetchCourse() {
+      try {
+        const res = await api.get(`/courses/${slug}`);
+        const data = res.data;
+
+        const transformed: CourseInfo = {
+          title: data.title || "",
+          image: data.image || "",
+          description: data.description || "",
+          weeks: data.duration_weeks || 0,
+          difficulty: "Beginner", // You can replace this if your API provides difficulty
+          estimatedTime: `${data.duration_weeks * 5 || 0} hours`,
+          rating: 5,
+          likePercentage: 95,
+          slug,
+          modules:
+            data.weeks?.map(
+              (week: any) =>
+                `Week ${week.week_number}: ${
+                  week.materials?.[0]?.title || "No title"
+                }`
+            ) || [],
+        };
+
+        setCourse(transformed);
+      } catch (error) {
+        console.error("Failed to load course:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchCourse();
+  }, [slug]);
+
+  if (loading) return <div className="p-10">Loading course...</div>;
+  if (!course) return <div className="p-10">Course not found.</div>;
+
+  // From here on: your original JSX with `course` available
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
       <Header />

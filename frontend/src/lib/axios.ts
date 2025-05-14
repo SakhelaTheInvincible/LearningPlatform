@@ -1,18 +1,18 @@
-import axios from 'axios';
+import axios from "axios";
 
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000/api',
+  baseURL: "http://127.0.0.1:8000/api",
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
 // Request interceptor: Attach access token to every request
 api.interceptors.request.use(
   (config) => {
-    const access = localStorage.getItem('access');
+    const access = localStorage.getItem("access");
     if (access) {
-      config.headers['Authorization'] = `Bearer ${access}`;
+      config.headers["Authorization"] = `Bearer ${access}`;
     }
     return config;
   },
@@ -29,20 +29,20 @@ api.interceptors.response.use(
       error.response &&
       error.response.status === 401 &&
       !originalRequest._retry &&
-      localStorage.getItem('refresh')
+      localStorage.getItem("refresh")
     ) {
       originalRequest._retry = true;
       try {
-        const refresh = localStorage.getItem('refresh');
-        const res = await api.post('/token/refresh/', { refresh });
-        localStorage.setItem('access', res.data.access);
+        const refresh = localStorage.getItem("refresh");
+        const res = await api.post("/token/refresh/", { refresh });
+        localStorage.setItem("access", res.data.access);
         // Update the Authorization header and retry the original request
-        originalRequest.headers['Authorization'] = `Bearer ${res.data.access}`;
+        originalRequest.headers["Authorization"] = `Bearer ${res.data.access}`;
         return api(originalRequest);
       } catch (refreshError) {
         // If refresh fails, clear tokens and redirect to login if needed
-        localStorage.removeItem('access');
-        localStorage.removeItem('refresh');
+        localStorage.removeItem("access");
+        localStorage.removeItem("refresh");
         // Optionally: window.location.href = '/login';
         return Promise.reject(refreshError);
       }
@@ -51,6 +51,4 @@ api.interceptors.response.use(
   }
 );
 
-export default api; 
-
-
+export default api;

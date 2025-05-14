@@ -15,9 +15,9 @@ interface Course {
 }
 
 async function getCourses(): Promise<Course[]> {
-  const res = await fetch('http://127.0.0.1:8000/api/courses/');
+  const res = await fetch("http://127.0.0.1:8000/api/courses/");
   if (!res.ok) {
-    throw new Error('Failed to fetch courses');
+    throw new Error("Failed to fetch courses");
   }
   return res.json();
 }
@@ -37,30 +37,28 @@ export default async function CoursesPage() {
           </h1>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {courses.map((course) => (
-              <Link
-                key={course.id}
-                href={`/courses/${course.slug}`}
-                className="group"
-              >
-                <div className="bg-white rounded-2xl shadow overflow-hidden transition-transform transform group-hover:scale-105 duration-300 ease-in-out cursor-pointer">
-                  <Image
-                    src={course.image || "/courses/default.jpg"}
-                    alt={course.title}
-                    width={400}
-                    height={200}
-                    className="w-full h-48 object-cover"
-                  />
-                  <div className="p-6">
-                    <h2 className="text-xl font-semibold text-indigo-600">
-                      {course.title}
-                    </h2>
-                    <p className="text-gray-600 mt-2">{course.description}</p>
-                    <span className="inline-block mt-4 px-3 py-1 bg-indigo-100 text-indigo-600 text-sm font-medium rounded-full">
-                      {course.level}
-                    </span>
+              <div className="" key={course.id}>
+                <Link href={`/courses/${course.title}`} className="group">
+                  <div className="bg-white rounded-2xl shadow overflow-hidden transition-transform transform group-hover:scale-105 duration-300 ease-in-out cursor-pointer">
+                    <Image
+                      src={course.image || "/courses/default.jpg"}
+                      alt={course.title}
+                      width={400}
+                      height={200}
+                      className="w-full h-48 object-cover"
+                    />
+                    <div className="p-6">
+                      <h2 className="text-xl font-semibold text-indigo-600">
+                        {course.title}
+                      </h2>
+                      <p className="text-gray-600 mt-2">{course.description}</p>
+                      <span className="inline-block mt-4 px-3 py-1 bg-indigo-100 text-indigo-600 text-sm font-medium rounded-full">
+                        {course.level}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </Link>
+                </Link>
+              </div>
             ))}
           </div>
         </div>
