@@ -38,6 +38,43 @@ class Course(models.Model):
     def __str__(self):
         return self.title
     
+    def clone_to_user(self, user):
+        with transaction.atomic():
+            new_course = Course.objects.create(
+                user=user,
+                title=self.title,
+                duration_weeks=self.duration_weeks,
+                description=self.description,
+                image=self.image,
+            )
+            
+            for week in self.weeks.all():
+                new_week = Week.objects.create(
+                    course=new_course,
+                    week_number=week.week_number
+                )
+                
+                for material in week.materials.all():
+                    Material.objects.create(
+                        title=material.title,
+                        description=material.description,
+                        material=material.material,
+                        summarized_material=material.summarized_material,
+                        week=new_week
+                    )
+
+                for question in week.questions.all():
+                    Question.objects.create(
+                        week=new_week,
+                        difficulty=question.difficulty,
+                        question_type=question.question_type,
+                        question_text=question.question_text,
+                        answer=question.answer,
+                        explanation=question.explanation
+                    )
+            
+            return new_course
+    
 
 class Week(models.Model):
     
