@@ -6,8 +6,7 @@ from django.contrib.auth.hashers import make_password, check_password
 class MaterialSerializer(serializers.ModelSerializer):
     class Meta:
         model = Material
-        fields = ['title', 'description',
-                  'material', 'summarized_material']
+        fields = ['title', 'description']
 
 
 class WeekSerializer(serializers.ModelSerializer):
@@ -23,7 +22,7 @@ class CourseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Course
-        fields = ['id', 'title', 'duration_weeks', 'weeks']
+        fields = ['title', 'description', 'image', 'duration_weeks', 'weeks']
 
 
 
