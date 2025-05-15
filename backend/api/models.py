@@ -1,6 +1,8 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.models import AbstractUser
+from django.db import transaction
+import random
 
 
 
@@ -106,6 +108,7 @@ class Material(models.Model):
     summarized_material = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    material_read = models.BooleanField(default=False)
     week = models.ForeignKey(
         Week,
         on_delete=models.CASCADE,
@@ -163,4 +166,87 @@ class Question(models.Model):
         return f"{self.get_difficulty_display()} question for Week {self.week.week_number} of {self.week.course.name}"
 
 
+class Quiz(models.Model):
+    DIFFICULTY_LEVEL_CHOICES = [
+        ('N', 'Normal'),
+        ('M', 'Medium'),
+        ('S', 'Standard'),
+        ('I', 'Intermediate'),
+        ('A', 'Advanced'),
+    ]
+    
+    week = models.ForeignKey(
+        Week, 
+        on_delete=models.CASCADE, 
+        related_name='quizzes'
+    )
+    difficulty = models.CharField(
+        max_length=1, 
+        choices=DIFFICULTY_LEVEL_CHOICES,
+        default='S'
+    )
+    user_score = models.PositiveSmallIntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+    questions = models.ManyToManyField(Question, related_name='quizzes')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        verbose_name_plural = 'Quizzes'
+        ordering = ['week', '-created_at']
+
+    def __str__(self):
+        return f"Quiz for Week {self.week.week_number} ({self.get_difficulty_display()})"
+
+    @classmethod
+    def create_quiz(cls, week, difficulty='S'):
+        quiz = cls.objects.create(week=week, difficulty=difficulty)
+        questions = quiz.select_questions(difficulty)
+        quiz.questions.set(questions)
+        return quiz
+
+    def select_questions(self, difficulty):
+        week_questions = self.week.questions.exclude(question_type='coding')
+        total_questions = week_questions.count()
+        
+        # Determine how many questions to select (min 10 or 1/3 of total)
+        num_questions = max(10, total_questions // 3)
+        
+        # Get difficulty distribution based on quiz difficulty
+        distribution = self.get_difficulty_distribution(difficulty)
+        
+        selected_questions = []
+        
+        for diff_code, percentage in distribution.items():
+            count = max(1, round(num_questions * percentage / 100))
+            questions = list(week_questions.filter(difficulty=diff_code))
+            
+            # If not enough questions of this difficulty, take what's available
+            count = min(count, len(questions))
+            
+            if count > 0:
+                selected = random.sample(questions, count)
+                selected_questions.extend(selected)
+        
+        # If we didn't get enough questions, fill with random ones
+        if len(selected_questions) < num_questions:
+            remaining = num_questions - len(selected_questions)
+            remaining_questions = list(set(week_questions) - set(selected_questions))
+            if remaining_questions:
+                selected_questions.extend(
+                    random.sample(remaining_questions, min(remaining, len(remaining_questions)))
+                )
+        
+        return selected_questions
+
+    def get_difficulty_distribution(self, difficulty):
+        distributions = {
+            'N': {'B': 40, 'K': 30, 'I': 15, 'A': 10, 'E': 5},    # Normal
+            'M': {'B': 10, 'K': 40, 'I': 30, 'A': 10, 'E': 5},    # Medium
+            'S': {'B': 10, 'K': 35, 'I': 30, 'A': 15, 'E': 10},    # Standard
+            'I': {'B': 5, 'K': 25, 'I': 30, 'A': 25, 'E': 15},     # Intermediate
+            'A': {'B': 5, 'K': 15, 'I': 30, 'A': 30, 'E': 20},     # Advanced
+        }
+        return distributions.get(difficulty, distributions['S'])  # Default to Standard
