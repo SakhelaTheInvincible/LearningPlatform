@@ -263,15 +263,13 @@ class QuizAnswerCheckView(APIView):
                 is_correct = comparison['is_correct']
             else:
                 is_correct = user_answer.lower().strip() == question.answer.lower().strip()
-                confidence = 1.0
                 
             if is_correct:
                 total_correct += 1
                 
             results[question_id] = {
-                'is_correct': is_correct,
-                'confidence': confidence,
-                'correct_answer': question.answer,
+                'answer': 'correct' if is_correct else 'wrong',
+                'real_answer': question.answer,
                 'explanation': question.explanation
             }
         
@@ -284,13 +282,5 @@ class QuizAnswerCheckView(APIView):
             quiz.user_score = score_percentage
             quiz.save(update_fields=['user_score'])
         
-        return Response({
-            'quiz_id': quiz_id,
-            'results': results,
-            'score': {
-                'correct': total_correct,
-                'total': total_questions,
-                'percentage': score_percentage
-            }
-        })
+        return Response(results)
     
