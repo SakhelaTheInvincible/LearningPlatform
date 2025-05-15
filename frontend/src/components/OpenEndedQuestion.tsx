@@ -3,12 +3,19 @@ import React from "react";
 
 interface OpenEndedProps {
   question: string;
-  difficulty: "Beginner" | "Intermediate" | "Advanced" | "Expert";
+  difficulty:
+    | "Beginner"
+    | "Base Knowledge"
+    | "Intermediate"
+    | "Advanced"
+    | "Expert";
+  onChange: (answer: string[]) => void;
 }
 
 export default function OpenEndedQuestion({
   question,
   difficulty,
+  onChange,
 }: OpenEndedProps) {
   return (
     <div className="border border-indigo-300 rounded-lg p-6 shadow-sm bg-gray-50">

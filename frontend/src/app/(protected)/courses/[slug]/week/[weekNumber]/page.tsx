@@ -57,7 +57,7 @@ export default function WeekLearning() {
           week?.materials?.map((material: any, index: number) => ({
             name: material.title || `Part ${index + 1}`,
             type: "reading", // You can customize this if your material has a type
-            slug: material.slug || `material-${index}`,
+            slug: material.slug || `reading`,
             description: `Part ${index + 1} - 5 min`,
             completed: false,
           })) || [];

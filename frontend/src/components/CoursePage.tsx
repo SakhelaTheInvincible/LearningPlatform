@@ -172,7 +172,7 @@ export default function CoursePage({ slug }: { slug: string }) {
 
         {/* About / Modules Content */}
         {activeTab === "about" ? (
-          <div className="bg-white p-6 w-[calc(100%-130px)] rounded-lg shadow ">
+          <div className="bg-white p-6 min-w-[350px] max-w-[700px] rounded-lg shadow ">
             <h2 className="text-2xl font-bold mb-4 text-indigo-700">
               About this Course
             </h2>
@@ -181,7 +181,7 @@ export default function CoursePage({ slug }: { slug: string }) {
             </div>
           </div>
         ) : (
-          <div className="bg-white p-6 w-[calc(100%-130px)] rounded-lg shadow ">
+          <div className="bg-white p-6 min-w-[350px] max-w-[700px] rounded-lg shadow ">
             <h2 className="text-2xl font-bold mb-4 text-indigo-700">
               Course Modules
             </h2>
