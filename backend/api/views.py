@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from ai.services import generate_material_summary, generate_questions_for_week
 from api.models import Course, Week, Question, Material, User, Quiz
-from api.serializers import CourseSerializer, QuestionSerializer, QuizSerializer
+from api.serializers import CourseSerializer, QuestionSerializer, QuizSerializer, WeekSerializer
 from file_manager.file_manager import extract_text
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
@@ -88,21 +88,14 @@ class MaterialQuizCreateAPIView(APIView):
                     'error': str(e)
                 })
         
-        # Check if any quizzes were successfully created
-        successful_quizzes = [q for q in created_quizzes if isinstance(q, Quiz)]
-        if not successful_quizzes:
-            return Response(
-                {"error": "Failed to create any quizzes"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
         response_data = {
-            "status_quizes": "success" if created_quizzes else "partial_success" if errors else "failed",
+            "status_quizes": "success",
             "created_quizzes": created_quizzes,
             "status": "success", 
             "created_materials": created_materials,
             "errors": errors if errors else None
         }
+        print(response_data)
 
         if not created_quizzes and errors:
             return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
@@ -207,3 +200,19 @@ class PasswordChangeView(APIView):
         user.set_password(new_password)
         user.save()
         return Response({'detail': 'Password changed successfully.'}, status=status.HTTP_200_OK)
+    
+    
+    
+class WeekRetrieveAPIView(APIView):
+    def get(self, request, title, selectedWeek):
+        # Get the course
+        course = get_object_or_404(Course.objects.prefetch_related('weeks', 'weeks__materials', 'weeks__quizzes'), title=title)
+        
+        # Get the specific week
+        week = get_object_or_404(course.weeks, week_number=selectedWeek)
+        
+        # Serialize the week data
+        serializer = WeekSerializer(week)
+        
+        return Response(serializer.data)
+    

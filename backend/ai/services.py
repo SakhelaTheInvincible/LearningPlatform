@@ -1,7 +1,7 @@
 import json
 from api.models import Course, Question, Week, Material
 from .client import get_ai_client
-from .constants import QUESTION_GEN_TEMPLATE, MAX_CHUNK_SIZE, QUESTION_TYPE_CHOICES, DIFFICULTIES, QUESTIONS_PER_LEVEL, SUMMARY_TEMPLATE, DIFFICULTY_MAPPING
+from .constants import QUESTION_GEN_TEMPLATE, MAX_CHUNK_SIZE, QUESTION_TYPE_CHOICES, DIFFICULTIES, DISTRIBUTIONS, SUMMARY_TEMPLATE, DIFFICULTY_MAPPING
 
 import textwrap
 from typing import Dict, List, Tuple
@@ -63,7 +63,8 @@ def generate_questions_for_week(week: Week) -> dict:
                 num_questions=questions_per_level,
                 difficulty=difficulty,
                 chunk=chunk,
-                question_types=QUESTION_TYPE_CHOICES
+                question_types=QUESTION_TYPE_CHOICES,
+                distribution=DISTRIBUTIONS
             )
 
             try:

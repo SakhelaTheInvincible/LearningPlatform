@@ -6,7 +6,7 @@ from django.contrib.auth.hashers import make_password, check_password
 class MaterialSerializer(serializers.ModelSerializer):
     class Meta:
         model = Material
-        fields = ['title', 'description']
+        fields = ['title', 'description', 'summarized_material']
 
 class QuestionSerializer(serializers.ModelSerializer):
     class Meta:

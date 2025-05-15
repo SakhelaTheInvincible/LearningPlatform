@@ -8,6 +8,14 @@ QUESTION_TYPE_CHOICES = ["open", "choice", "multiple_choice", "true_false", "cod
 QUESTIONS_PER_LEVEL = 2
 MAX_CHUNK_SIZE = 32000
 
+DISTRIBUTIONS = {
+          'B': {'true_false': 40, 'choice': 30, 'multiple_choice': 20, 'open': 10},
+          'K': {'true_false': 30, 'choice': 35, 'multiple_choice': 25, 'open': 10},
+          'I': {'true_false': 20, 'choice': 30, 'multiple_choice': 35, 'open': 15},
+          'A': {'true_false': 20, 'choice': 20, 'multiple_choice': 30, 'open': 30},
+          'E': {'true_false': 10, 'choice': 10, 'multiple_choice': 40, 'open': 40},
+      }
+
 # Prompt Templates
 SUMMARY_TEMPLATE = """
 Create a simplified version of this material using plain language while preserving all key concepts.
@@ -39,6 +47,9 @@ Requirements:
   for example python or etc. Also the question must be just description of problem, answer should be formatted code snippet
   and explanation just a description of how the code works and why is it the answer
 8. Please, don't mix question types and questions themselves, for example, if question type is true_false, don't output open-question type answer
+9. for choice questions at the end of question (text) output choices like this for example: a) something b) nothing c) anything..., and for answer just output the letter: a, b, c....
+10. for multiple choice questions do the same as choice, but in answer output string with commas: a,b,c,....
+11. balance question_types, use probability distribution for {difficulty} {distribution}, exclude coding questions here, (as said before adding them is optional)
 
 Material Excerpt:
 {chunk}
