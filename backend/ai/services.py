@@ -1,7 +1,11 @@
 import json
 from api.models import Course, Question, Week, Material
 from .client import get_ai_client
-from .constants import QUESTION_GEN_TEMPLATE, MAX_CHUNK_SIZE, QUESTION_TYPE_CHOICES, DIFFICULTIES, DISTRIBUTIONS, SUMMARY_TEMPLATE, DIFFICULTY_MAPPING
+from .constants import (
+    QUESTION_GEN_TEMPLATE, MAX_CHUNK_SIZE, QUESTION_TYPE_CHOICES, 
+    DIFFICULTIES, QUESTIONS_PER_LEVEL, SUMMARY_TEMPLATE, 
+    DIFFICULTY_MAPPING, ANSWER_COMPARISON_TEMPLATE, DISTRIBUTIONS
+)
 
 import textwrap
 from typing import Dict, List, Tuple
@@ -120,3 +124,37 @@ def generate_questions_for_week(week: Week) -> dict:
         "difficulty_distribution": difficulty_counts,
         "average_questions_per_level": len(created_questions) // len(DIFFICULTIES)
     }
+
+def compare_answers(question_type: str, correct_answer: str, user_answer: str) -> dict:
+    if question_type not in ['open', 'coding']:
+        raise ValueError("Question type must be either 'open' or 'coding'")
+        
+    client = get_ai_client()
+    
+    prompt = ANSWER_COMPARISON_TEMPLATE.format(
+        question_type=question_type,
+        correct_answer=correct_answer,
+        user_answer=user_answer
+    )
+    
+    try:
+        response = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            response_format={"type": "json_object"}
+        )
+        
+        result = json.loads(response.choices[0].message.content)
+            
+        return {
+            'is_correct': bool(result)
+        }
+        
+    except Exception as e:
+        print(f"Error in answer comparison: {str(e)}")
+        # Fallback to basic string comparison if AI fails
+        return {
+            'is_correct': user_answer.lower().strip() == correct_answer.lower().strip(),
+            'confidence': 1.0
+        }

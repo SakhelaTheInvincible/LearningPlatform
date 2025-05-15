@@ -68,3 +68,30 @@ OUTPUT FORMAT:
   "continuation_marker": "..."
 }}
 """
+
+ANSWER_COMPARISON_TEMPLATE = """
+Compare a user's answer with the correct answer and determine if they are semantically equivalent.
+
+Context:
+- Question Type: {question_type} (open or coding)
+- Correct Answer: {correct_answer}
+- User's Answer: {user_answer}
+
+Rules for comparison:
+1. For 'open' type:
+   - Focus on key concepts and main ideas
+   - Ignore minor grammatical differences
+   - Accept different phrasings that convey the same meaning
+   - Be somewhat lenient but ensure core understanding is demonstrated
+
+2. For 'coding' type:
+   - Ignore whitespace and formatting differences
+   - Accept different variable names if logic is identical
+   - Consider alternative valid implementations
+   - Focus on algorithmic correctness and output
+   - Be strict about syntax and logic errors
+
+Determine if the answers are equivalent and respond with:
+true/false
+
+Remember: Be lenient with language/formatting but strict with core concepts and logic."""

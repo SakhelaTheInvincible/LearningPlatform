@@ -1,7 +1,7 @@
 from rest_framework.decorators import api_view, APIView
 from rest_framework.response import Response
 from rest_framework import status
-from ai.services import generate_material_summary, generate_questions_for_week
+from ai.services import generate_material_summary, generate_questions_for_week, compare_answers
 from api.models import Course, Week, Question, Material, User, Quiz
 from api.serializers import CourseSerializer, QuestionSerializer, QuizSerializer, WeekSerializer
 from file_manager.file_manager import extract_text
@@ -215,4 +215,82 @@ class WeekRetrieveAPIView(APIView):
         serializer = WeekSerializer(week)
         
         return Response(serializer.data)
+
+class QuizAnswerCheckView(APIView):
+    def post(self, request, title, selectedWeek):
+        quiz_id = request.data.get('quiz_id')
+        questions = request.data.get('questions', {})
+        
+        if not quiz_id or not questions:
+            return Response(
+                {"error": "quiz_id and questions object are required"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # Get the quiz and verify it belongs to the correct week/course
+        quiz = get_object_or_404(
+            Quiz.objects.select_related('week__course').prefetch_related('questions'),
+            id=quiz_id,
+            week__course__title=title,
+            week__week_number=selectedWeek
+        )
+        
+        # Get all questions in a single query
+        quiz_questions = {
+            str(q.id): q for q in quiz.questions.all()
+        }
+        
+        results = {}
+        total_correct = 0
+        
+        # Process each question
+        for question_id, user_answer in questions.items():
+            question = quiz_questions.get(str(question_id))
+            
+            if not question:
+                results[question_id] = {
+                    "error": "Question not found in this quiz"
+                }
+                continue
+            
+            # Use AI comparison for open and coding questions
+            if question.question_type in ['open', 'coding']:
+                comparison = compare_answers(
+                    question_type=question.question_type,
+                    correct_answer=question.answer,
+                    user_answer=user_answer
+                )
+                is_correct = comparison['is_correct']
+            else:
+                is_correct = user_answer.lower().strip() == question.answer.lower().strip()
+                confidence = 1.0
+                
+            if is_correct:
+                total_correct += 1
+                
+            results[question_id] = {
+                'is_correct': is_correct,
+                'confidence': confidence,
+                'correct_answer': question.answer,
+                'explanation': question.explanation
+            }
+        
+        # Calculate score percentage
+        total_questions = len(questions)
+        score_percentage = (total_correct / total_questions * 100) if total_questions > 0 else 0
+        
+        # Update quiz score if it's higher than previous
+        if score_percentage > quiz.user_score:
+            quiz.user_score = score_percentage
+            quiz.save(update_fields=['user_score'])
+        
+        return Response({
+            'quiz_id': quiz_id,
+            'results': results,
+            'score': {
+                'correct': total_correct,
+                'total': total_questions,
+                'percentage': score_percentage
+            }
+        })
     
