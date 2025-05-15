@@ -1,8 +1,7 @@
 from django.urls import path
-from .views import (generate_all_questions,
-                    get_week_view, course_view, create_weeks_view, OnlyCourseListAPIView, UserCreateAPIView,
+from .views import (OnlyCourseListAPIView, UserCreateAPIView,
                     UserRetrieveUpdateDestroyAPIView, UserListAPIView,
-                    PasswordChangeView, OnlyCourseCreateAPIView, MaterialCreateAPIView, CourseRetrieveUpdateDestroyAPIView)
+                    PasswordChangeView, OnlyCourseCreateAPIView, MaterialQuizCreateAPIView, CourseRetrieveUpdateDestroyAPIView)
 
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -22,19 +21,10 @@ urlpatterns = [
     path('course/upload/', OnlyCourseCreateAPIView.as_view(), name='courses-create'),
 
     path('course/upload/<str:courseTitle>/week/<int:selectedWeek>/',
-         MaterialCreateAPIView.as_view(), name='material-upload'),
+         MaterialQuizCreateAPIView.as_view(), name='material-upload'),
 
     path('signup/', UserCreateAPIView.as_view(), name='user-creation'),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
-    path('course/<int:course_id>/create_weeks/',
-         create_weeks_view, name='create-weeks'),
-    # courses/upload
-
-    # Question endpoints
-    path('course/<int:course_id>/questions/generate/',
-         generate_all_questions, name='generate-all-questions'),
-    path('course/<int:course_id>/week/<int:week_number>/',
-         get_week_view, name='week-questions'),
 ]
