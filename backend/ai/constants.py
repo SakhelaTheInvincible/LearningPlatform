@@ -15,7 +15,7 @@ Rules:
 1. Keep technical terms but explain them simply
 2. Target high school reading level
 3. Maintain original structure
-4. Output should be 30-50% shorter than input
+4. Output should be 40-60% of the input
 5. End with a clear transition sentence for context continuity
 
 Material:
@@ -24,7 +24,6 @@ Material:
 
 QUESTION_GEN_TEMPLATE = """
 Generate {num_questions} {difficulty}-level questions about this material.
-Context: {context_hint}
 
 Requirements:
 1. Include these question types: {question_types}
