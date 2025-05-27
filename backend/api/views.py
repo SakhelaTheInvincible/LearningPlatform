@@ -1,8 +1,8 @@
 from rest_framework.decorators import api_view, APIView
 from rest_framework.response import Response
 from rest_framework import status
-from ai.services import generate_material_summary, generate_questions_for_week, compare_answers
-from api.models import Course, Week, Question, Material, User, Quiz
+from ai.services import generate_material_summary, generate_questions_for_week, compare_answers, check_language, generate_coding_problems_for_week
+from api.models import Course, Week, Question, Material, User, Quiz, Code
 from api.serializers import CourseSerializer, QuestionSerializer, QuizSerializer, WeekSerializer
 from file_manager.file_manager import extract_text
 from django.core.files.storage import default_storage
@@ -65,6 +65,12 @@ class MaterialQuizCreateAPIView(APIView):
             print("material ai success")
             created_materials.append(material.id)
             
+        
+        # If course is programming language, then create coding challanges:
+        if course.language != 'None':
+            generate_coding_problems_for_week(week=week)
+            print("Coding Challanges Generated")
+            
         # Create Questions
         generate_questions_for_week(week=week)
         print("week questions generated")
@@ -117,7 +123,10 @@ class OnlyCourseCreateAPIView(generics.CreateAPIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        title = serializer.validated_data['title']
+        
+        # create course, but also check if created course is about some programming language
+        serializer.save(user=self.request.user, language=check_language(title))
 
 
 class OnlyCourseListAPIView(generics.ListAPIView):
@@ -206,7 +215,7 @@ class PasswordChangeView(APIView):
 class WeekRetrieveAPIView(APIView):
     def get(self, request, title, selectedWeek):
         # Get the course
-        course = get_object_or_404(Course.objects.prefetch_related('weeks', 'weeks__materials', 'weeks__quizzes'), title=title)
+        course = get_object_or_404(Course.objects.prefetch_related('weeks', 'weeks__materials', 'weeks__quizzes', 'weeks__codes'), title=title)
         
         # Get the specific week
         week = get_object_or_404(course.weeks, week_number=selectedWeek)
@@ -283,4 +292,43 @@ class QuizAnswerCheckView(APIView):
             quiz.save(update_fields=['user_score'])
         
         return Response(results)
+    
+
+
+class CodeCheckView(APIView):
+    def post(self, request, title, selectedWeek):
+        code_id = request.data.get('code_id')
+        solution = request.data.get('solution')
+        
+        if not code_id or not solution:
+            return Response(
+                {"error": "code_id and solution are required"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # Get the code and verify it belongs to the correct week/course
+        code = get_object_or_404(
+            Code.objects.select_related('week__course'),
+            id=code_id,
+            week__course__title=title,
+            week__week_number=selectedWeek
+        )
+        
+        comparison = compare_answers(
+            question_type="coding",
+            correct_answer=code.solution,
+            user_answer=solution
+        )
+        user_score = comparison['user_score']
+        error = comparison['error']
+        
+        # Update code score if it's higher than previous
+        if user_score > code.user_score:
+            code.user_score = user_score
+            code.save(update_fields=['user_score'])
+        
+        return Response({
+            "user_score" : user_score,
+            "error" : error
+        })
     

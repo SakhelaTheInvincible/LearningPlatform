@@ -1,7 +1,8 @@
 from django.urls import path
 from .views import (OnlyCourseListAPIView, UserCreateAPIView,
                     UserRetrieveUpdateDestroyAPIView, UserListAPIView,
-                    PasswordChangeView, OnlyCourseCreateAPIView, MaterialQuizCreateAPIView, CourseRetrieveUpdateDestroyAPIView, WeekRetrieveAPIView, QuizAnswerCheckView)
+                    PasswordChangeView, OnlyCourseCreateAPIView, MaterialQuizCreateAPIView, CourseRetrieveUpdateDestroyAPIView, 
+                    WeekRetrieveAPIView, QuizAnswerCheckView, CodeCheckView)
 
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -17,6 +18,9 @@ urlpatterns = [
     
     path('courses/<str:title>/week/<int:selectedWeek>/quiz/check/', QuizAnswerCheckView.as_view(),
          name='quiz-check'),
+    
+    path('courses/<str:title>/week/<int:selectedWeek>/code/check/', CodeCheckView.as_view(),
+         name='code-check'),
     
     path('users/list/', UserListAPIView.as_view(), name='user-details'),
     path('users/me/',
