@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Course, Week, Question, Material, User, Quiz
+from .models import Course, Week, Question, Material, User, Quiz, Code
 from django.contrib.auth.hashers import make_password, check_password
 
 
@@ -20,13 +20,19 @@ class QuizSerializer(serializers.ModelSerializer):
         model = Quiz
         fields = ['id', 'difficulty', 'user_score', 'created_at', 'questions']
 
+class CodeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Code
+        fields = '__all__'
+
 class WeekSerializer(serializers.ModelSerializer):
     materials = MaterialSerializer(many=True, read_only=True)
     quizzes = QuizSerializer(many=True, read_only=True)
+    codes = CodeSerializer(many=True, read_only=True)
 
     class Meta:
         model = Week
-        fields = ['week_number', 'materials', 'quizzes']
+        fields = ['week_number', 'materials', 'quizzes', 'is_completed']
 
 
 class CourseSerializer(serializers.ModelSerializer):
@@ -34,7 +40,7 @@ class CourseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Course
-        fields = ['title', 'description', 'image', 'duration_weeks', 'weeks']
+        fields = ['title', 'description', 'image', 'duration_weeks', 'weeks', 'language', 'is_completed']
 
 
 
@@ -88,4 +94,4 @@ class OnlyCourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = ['id','title', 'duration_weeks', 'description', 'user',
-                  'image']
+                  'image', 'language', 'is_completed']

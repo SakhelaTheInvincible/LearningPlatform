@@ -30,6 +30,8 @@ class Course(models.Model):
     image = models.ImageField(upload_to='courses/',blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_completed = models.BooleanField(default=False)
+    language = models.TextField(default="None")
 
     class Meta:
         ordering = ['title']
@@ -74,6 +76,24 @@ class Course(models.Model):
                         answer=question.answer,
                         explanation=question.explanation
                     )
+                    
+                for quiz in week.quizzes.all():
+                    Quiz.objects.create(
+                        week=new_week,
+                        difficulty=quiz.difficulty,
+                        user_score=0,
+                        questions=quiz.questions.all()
+                    )
+                
+                for code in week.codes.all():
+                    Code.objects.create(
+                        week=new_week,
+                        difficulty=code.difficulty,
+                        user_score=0,
+                        problem_statement=code.problem_statement,
+                        solution=code.solution,
+                        template_code=code.template_code
+                    )
             
             return new_course
     
@@ -90,6 +110,7 @@ class Week(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_completed = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ['course', 'week_number']
@@ -136,8 +157,7 @@ class Question(models.Model):
         ('open', 'Open-ended'),
         ('choice', 'Single Choice'),
         ('multiple_choice', 'Multiple Choice'),
-        ('true_false', 'True or False'),
-        ('coding', 'Coding Challenge')
+        ('true_false', 'True or False')
     ]
     
     week = models.ForeignKey(
@@ -250,3 +270,32 @@ class Quiz(models.Model):
             'A': {'B': 5, 'K': 15, 'I': 30, 'A': 30, 'E': 20},     # Advanced
         }
         return distributions.get(difficulty, distributions['S'])  # Default to Standard
+
+
+class Code(models.Model):
+    DIFFICULTY_LEVEL_CHOICES = [
+        ('E', 'Easy'),
+        ('M', 'Medium'),
+        ('H', 'Hard'),
+    ]
+    week = models.ForeignKey(
+        Week, 
+        on_delete=models.CASCADE, 
+        related_name='codes'
+    )
+    difficulty = models.CharField(
+        max_length=1, 
+        choices=DIFFICULTY_LEVEL_CHOICES,
+        default='S'
+    )
+    
+    problem_statement = models.TextField()
+    solution = models.TextField()
+    template_code = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    user_score = models.PositiveSmallIntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+    
