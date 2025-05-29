@@ -65,7 +65,7 @@ export default function ProfilePage() {
     }
     try {
       setLoading(true);
-      const res = await api.patch("/users/me/", formData, {
+      const res = await api.put("/users/me/", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setUser(res.data);
@@ -90,7 +90,7 @@ export default function ProfilePage() {
     try {
       setLoading(true);
       // You may need to adjust the endpoint depending on your backend
-      await api.post("/users/set_password/", {
+      await api.put("/users/set_password/", {
         old_password: passwordForm.current_password,
         new_password: passwordForm.new_password,
       });
@@ -125,7 +125,7 @@ export default function ProfilePage() {
                   className="rounded-full object-cover"
                 />
               </div>
-              <h3 className="text-lg font-semibold mb-4">{user.first_name} {user.last_name}</h3>
+              <h3 className="text-lg font-semibold mb-4">{user.username}</h3>
               <label className="bg-indigo-600 text-white px-4 py-2 rounded cursor-pointer hover:bg-indigo-700 transition">
                 Upload Image
                 <input

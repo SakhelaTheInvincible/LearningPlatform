@@ -1,4 +1,4 @@
-from rest_framework.decorators import api_view, APIView
+from rest_framework.decorators import api_view, APIView, action
 from rest_framework.response import Response
 from rest_framework import status
 from ai.services import generate_material_summary, generate_questions_for_week, compare_answers, check_language, generate_coding_problems_for_week
@@ -8,9 +8,13 @@ from file_manager.file_manager import extract_text
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from rest_framework import generics
-from api.serializers import OnlyCourseSerializer, UserSerializer, PasswordChangeSerializer, CourseSerializer
-from rest_framework.parsers import MultiPartParser, FormParser
-from rest_framework.permissions import IsAuthenticated
+from api.serializers import (OnlyCourseSerializer,
+                             CourseSerializer,
+                             UserSerializer, UserSignUpSerializer, PasswordChangeSerializer, UserPublicSerializer)
+
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from django.contrib.auth.hashers import make_password, check_password
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.shortcuts import get_object_or_404
@@ -19,6 +23,94 @@ from django.conf import settings
 from django.db.models import Q
 
 
+from rest_framework import mixins, viewsets
+
+
+# USER SECTION
+# ====================#
+class UserViewSet(mixins.
+                  UpdateModelMixin,
+                  mixins.DestroyModelMixin,
+                  viewsets.GenericViewSet):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
+
+    def get_serializer_class(self):
+        if self.action == "set_password":
+            return PasswordChangeSerializer
+        else:
+            return UserSerializer
+
+    def get_object(self):
+        return self.request.user
+    # no need to override get_queryset was I will not be using several objects from db
+
+    @action(detail=False, methods=["GET", "PUT", "DELETE"])
+    def me(self, request, *args, **kwargs):
+        try:
+            user = request.user
+            if request.method == "PUT":
+                serializer = self.get_serializer(
+                    user, data=request.data, partial=True)
+                serializer.is_valid(raise_exception=True)
+                self.perform_update(serializer)
+            elif request.method == "DELETE":
+                self.perform_destroy(user)
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            else:
+                serializer = self.get_serializer(user)
+
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(str(e), status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=["PUT", "PATCH"])
+    def set_password(self, request, *args, **kwargs):
+        serializer = self.get_serializer(
+            data=request.data, context={'request': request})
+        try:
+            serializer.is_valid(raise_exception=True)
+            user = request.user
+            user.set_password(serializer.validated_data['new_password'])
+            user.save()
+            return Response({'detail': 'Password changed successfully.'})
+        except Exception as e:
+            return Response(str(e), status=status.HTTP_400_BAD_REQUEST)
+
+        # if serializer.is_valid():
+        #     user = request.user
+        #     user.set_password(serializer.validated_data['new_password'])
+        #     user.save()
+        #     return Response({'detail': 'Password changed successfully.'})
+        # else:
+        #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserSignUpViewSet(mixins.CreateModelMixin,
+                        viewsets.GenericViewSet):
+    serializer_class = UserSignUpSerializer
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+# for testing Purposes!!!
+
+
+class UserPublicViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserPublicSerializer
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+
+class AdminUserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer  # Or a more detailed serializer if you want
+    permission_classes = [IsAdminUser]
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
+    authentication_classes = [JWTAuthentication]
+
+# ====================#
 class MaterialQuizCreateAPIView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
@@ -60,24 +152,24 @@ class MaterialQuizCreateAPIView(APIView):
                 title=material_title or file.name,
                 description=material_description,
                 material=extracted_text,
-                summarized_material=generate_material_summary(material=extracted_text),
+                summarized_material=generate_material_summary(
+                    material=extracted_text),
             )
             print("material ai success")
             created_materials.append(material.id)
-            
-        
+
         # If course is programming language, then create coding challanges:
         if course.language != 'None':
             generate_coding_problems_for_week(week=week)
             print("Coding Challanges Generated")
-            
+
         # Create Questions
         generate_questions_for_week(week=week)
         print("week questions generated")
         # Create Quizes
         created_quizzes = []
         errors = []
-        
+
         # Create quizzes for all difficulty levels
         for difficulty_code, difficulty_name in Quiz.DIFFICULTY_LEVEL_CHOICES:
             try:
@@ -93,11 +185,11 @@ class MaterialQuizCreateAPIView(APIView):
                     'difficulty': difficulty_code,
                     'error': str(e)
                 })
-        
+
         response_data = {
             "status_quizes": "success",
             "created_quizzes": created_quizzes,
-            "status": "success", 
+            "status": "success",
             "created_materials": created_materials,
             "errors": errors if errors else None
         }
@@ -106,6 +198,7 @@ class MaterialQuizCreateAPIView(APIView):
         if not created_quizzes and errors:
             return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
         return Response(response_data, status=status.HTTP_201_CREATED)
+
 
 class OnlyCourseCreateAPIView(generics.CreateAPIView):
     serializer_class = OnlyCourseSerializer
@@ -124,7 +217,7 @@ class OnlyCourseCreateAPIView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         title = serializer.validated_data['title']
-        
+
         # create course, but also check if created course is about some programming language
         serializer.save(user=self.request.user, language=check_language(title))
 
@@ -157,111 +250,62 @@ class CourseRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     #     # May raise a permission denied
     #     self.check_object_permissions(self.request, obj)
 
-    #     return obj
-
-class UserCreateAPIView(generics.CreateAPIView):
-    serializer_class = UserSerializer
-
-
-class UserRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    parser_classes = (MultiPartParser, FormParser)
-
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(
-            instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-
-        if getattr(instance, '_prefetched_objects_cache', None):
-            # If 'prefetch_related' has been applied to a queryset, we need to
-            # forcibly invalidate the prefetch cache on the instance.
-            instance._prefetched_objects_cache = {}
-
-        return Response(serializer.data)
-
-    def get_object(self):
-        # Always return the authenticated user
-        return self.request.user
-
-
-class UserListAPIView(generics.ListAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-
-
-class PasswordChangeView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        user = request.user
-        old_password = request.data.get('old_password')
-        new_password = request.data.get('new_password')
-
-        if not old_password or not new_password:
-            return Response({'detail': 'Both old and new passwords are required.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        if not user.check_password(old_password):
-            return Response({'detail': 'Old password is incorrect.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        user.set_password(new_password)
-        user.save()
-        return Response({'detail': 'Password changed successfully.'}, status=status.HTTP_200_OK)
+    #     return 
     
-    
-    
+
 class WeekRetrieveAPIView(APIView):
     def get(self, request, title, selectedWeek):
         # Get the course
-        course = get_object_or_404(Course.objects.prefetch_related('weeks', 'weeks__materials', 'weeks__quizzes', 'weeks__codes'), title=title)
-        
+        course = get_object_or_404(Course.objects.prefetch_related(
+            'weeks', 'weeks__materials', 'weeks__quizzes', 'weeks__codes'), title=title)
+
         # Get the specific week
         week = get_object_or_404(course.weeks, week_number=selectedWeek)
-        
+
         # Serialize the week data
         serializer = WeekSerializer(week)
-        
+
         return Response(serializer.data)
+
 
 class QuizAnswerCheckView(APIView):
     def post(self, request, title, selectedWeek):
         quiz_id = request.data.get('quiz_id')
         questions = request.data.get('questions', {})
-        
+
         if not quiz_id or not questions:
             return Response(
-                {"error": "quiz_id and questions object are required"}, 
+                {"error": "quiz_id and questions object are required"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-            
+
         # Get the quiz and verify it belongs to the correct week/course
         quiz = get_object_or_404(
-            Quiz.objects.select_related('week__course').prefetch_related('questions'),
+            Quiz.objects.select_related(
+                'week__course').prefetch_related('questions'),
             id=quiz_id,
             week__course__title=title,
             week__week_number=selectedWeek
         )
-        
+
         # Get all questions in a single query
         quiz_questions = {
             str(q.id): q for q in quiz.questions.all()
         }
-        
+
         results = {}
         total_correct = 0
-        
+
         # Process each question
         for question_id, user_answer in questions.items():
             question = quiz_questions.get(str(question_id))
-            
+
             if not question:
                 results[question_id] = {
                     "error": "Question not found in this quiz"
                 }
                 continue
-            
+
             # Use AI comparison for open and coding questions
             if question.question_type in ['open', 'coding']:
                 comparison = compare_answers(
@@ -272,40 +316,40 @@ class QuizAnswerCheckView(APIView):
                 is_correct = comparison['is_correct']
             else:
                 is_correct = user_answer.lower().strip() == question.answer.lower().strip()
-                
+
             if is_correct:
                 total_correct += 1
-                
+
             results[question_id] = {
                 'answer': 'correct' if is_correct else 'wrong',
                 'real_answer': question.answer,
                 'explanation': question.explanation
             }
-        
+
         # Calculate score percentage
         total_questions = len(questions)
-        score_percentage = (total_correct / total_questions * 100) if total_questions > 0 else 0
-        
+        score_percentage = (total_correct / total_questions *
+                            100) if total_questions > 0 else 0
+
         # Update quiz score if it's higher than previous
         if score_percentage > quiz.user_score:
             quiz.user_score = score_percentage
             quiz.save(update_fields=['user_score'])
-        
+
         return Response(results)
-    
 
 
 class CodeCheckView(APIView):
     def post(self, request, title, selectedWeek):
         code_id = request.data.get('code_id')
         solution = request.data.get('solution')
-        
+
         if not code_id or not solution:
             return Response(
-                {"error": "code_id and solution are required"}, 
+                {"error": "code_id and solution are required"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-            
+
         # Get the code and verify it belongs to the correct week/course
         code = get_object_or_404(
             Code.objects.select_related('week__course'),
@@ -313,7 +357,7 @@ class CodeCheckView(APIView):
             week__course__title=title,
             week__week_number=selectedWeek
         )
-        
+
         comparison = compare_answers(
             question_type="coding",
             correct_answer=code.solution,
@@ -321,14 +365,14 @@ class CodeCheckView(APIView):
         )
         user_score = comparison['user_score']
         error = comparison['error']
-        
+
         # Update code score if it's higher than previous
         if user_score > code.user_score:
             code.user_score = user_score
             code.save(update_fields=['user_score'])
-        
+
         return Response({
-            "user_score" : user_score,
-            "error" : error
+            "user_score": user_score,
+            "error": error
         })
-    
+

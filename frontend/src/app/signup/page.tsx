@@ -10,7 +10,7 @@ export default function SignupPage() {
     last_name: "",
     email: "",
     password: "",
-    repeatPassword: "",
+    password_confirm: "",
   });
   const [error, setError] = useState("");
 
@@ -21,14 +21,10 @@ export default function SignupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (formData.password !== formData.repeatPassword) {
-      alert("Passwords do not match.");
-      return;
-    }
 
     try {
       await api.post("/signup/", formData);
-      router.push("/");
+      router.push("/courses");
     } catch (err: any) {
       setError(err.response?.data?.detail || "Signup failed");
     }
@@ -120,10 +116,10 @@ export default function SignupPage() {
               Repeat Password
             </label>
             <input
-              name="repeatPassword"
+              name="password_confirm"
               type="password"
               required
-              value={formData.repeatPassword}
+              value={formData.password_confirm}
               onChange={handleChange}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500"
             />

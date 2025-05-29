@@ -5,18 +5,35 @@ from django.db import transaction
 import random
 
 
-
 class User(AbstractUser):
-    profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
+    profile_picture = models.ImageField(
+        upload_to='profile_pics/', blank=True, null=True)
+
+    def delete(self, *args, **kwargs):
+        if self.profile_picture:
+            self.profile_picture.delete(save=False)
+        super().delete(*args, **kwargs)
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            try:
+                old_user = User.objects.get(pk=self.pk)
+                if old_user.profile_picture and old_user.profile_picture != self.profile_picture:
+                    old_user.profile_picture.delete(save=False)
+            except User.DoesNotExist:
+                pass
+            super().save(*args, **kwargs)
 
     def is_admin(self):
         return self.is_superuser
-    
+
     def __str__(self) -> str:
-        return  self.username
+        return self.username
+
 
 class Course(models.Model):
-    title = models.CharField(max_length=100, unique=True)
+    title = models.CharField(max_length=100)
+    title_slug = models.SlugField(unique=True)
     duration_weeks = models.PositiveSmallIntegerField(
         default=14,
         validators=[MinValueValidator(1), MaxValueValidator(20)]
@@ -27,22 +44,27 @@ class Course(models.Model):
         on_delete=models.CASCADE,
         related_name='users'
     )
-    image = models.ImageField(upload_to='courses/',blank=True,null=True)
+    image = models.ImageField(upload_to='courses/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_completed = models.BooleanField(default=False)
     language = models.TextField(default="None")
 
-    class Meta:
-        ordering = ['title']
-        indexes = [
-            models.Index(fields=['title']),
-        ]
-        
+    def delete(self, *args, **kwargs):
+        if self.image:
+            self.image.delete(save=False)
+        super().delete(*args, kwargs)
+
+    # class Meta:
+    #     ordering = ['title']
+    #     indexes = [
+    #         models.Index(fields=['title']),
+    #     ]
+
     def __str__(self):
         return self.title
-    
-    def clone_to_user(self, user):
+
+    # def clone_to_user(self, user):
         with transaction.atomic():
             new_course = Course.objects.create(
                 user=user,
@@ -51,13 +73,13 @@ class Course(models.Model):
                 description=self.description,
                 image=self.image,
             )
-            
+
             for week in self.weeks.all():
                 new_week = Week.objects.create(
                     course=new_course,
                     week_number=week.week_number
                 )
-                
+
                 for material in week.materials.all():
                     Material.objects.create(
                         title=material.title,
@@ -76,7 +98,7 @@ class Course(models.Model):
                         answer=question.answer,
                         explanation=question.explanation
                     )
-                    
+
                 for quiz in week.quizzes.all():
                     Quiz.objects.create(
                         week=new_week,
@@ -84,7 +106,7 @@ class Course(models.Model):
                         user_score=0,
                         questions=quiz.questions.all()
                     )
-                
+
                 for code in week.codes.all():
                     Code.objects.create(
                         week=new_week,
@@ -94,15 +116,15 @@ class Course(models.Model):
                         solution=code.solution,
                         template_code=code.template_code
                     )
-            
+
             return new_course
-    
+
 
 class Week(models.Model):
-    
+
     course = models.ForeignKey(
-        Course, 
-        on_delete=models.CASCADE, 
+        Course,
+        on_delete=models.CASCADE,
         related_name='weeks'
     )
     week_number = models.PositiveSmallIntegerField(
@@ -118,23 +140,32 @@ class Week(models.Model):
         indexes = [
             models.Index(fields=['course', 'week_number']),
         ]
-    
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        incomplete_weeks = self.course.weeks.filter(is_completed=False).count()
+        self.course.weeks.fil
+        self.course.is_completed = (incomplete_weeks == 0)
+        self.course.save()
+
     def __str__(self):
         return f"Week {self.week_number} of {self.course.title}"
+
 
 class Material(models.Model):
     title = models.CharField(max_length=50)
     description = models.TextField()
-    material = models.TextField() ## this is extracted text for ai client 
+    material = models.TextField()  # this is extracted text for ai client
     summarized_material = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    material_read = models.BooleanField(default=False)
+    is_read = models.BooleanField(default=False)
     week = models.ForeignKey(
         Week,
         on_delete=models.CASCADE,
         related_name='materials'
-        ) 
+    )
+
     class Meta:
         ordering = ['week', 'title']
         indexes = [
@@ -144,6 +175,14 @@ class Material(models.Model):
     def __str__(self):
         return f"{self.title} - Week {self.week.week_number} ({self.week.course.title})"
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        incomplete_materials = self.week.materials.filter(
+            is_read=False).count()
+        self.week.is_completed = (incomplete_materials == 0)
+        self.week.save()
+
+
 class Question(models.Model):
     DIFFICULTY_CHOICES = [
         ('B', 'Beginner'),
@@ -152,22 +191,22 @@ class Question(models.Model):
         ('A', 'Advanced'),
         ('E', 'Expert')
     ]
-    
+
     QUESTION_TYPE_CHOICES = [
         ('open', 'Open-ended'),
         ('choice', 'Single Choice'),
         ('multiple_choice', 'Multiple Choice'),
         ('true_false', 'True or False')
     ]
-    
+
     week = models.ForeignKey(
-        Week, 
-        on_delete=models.CASCADE, 
+        Week,
+        on_delete=models.CASCADE,
         related_name='questions'
     )
     difficulty = models.CharField(max_length=1, choices=DIFFICULTY_CHOICES)
     question_type = models.CharField(
-        max_length=20, 
+        max_length=20,
         choices=QUESTION_TYPE_CHOICES
     )
     question_text = models.TextField()
@@ -181,6 +220,7 @@ class Question(models.Model):
         indexes = [
             models.Index(fields=['week', 'difficulty']),
         ]
+
     @property
     def __str__(self):
         return f"{self.get_difficulty_display()} question for Week {self.week.week_number} of {self.week.course.name}"
@@ -194,14 +234,14 @@ class Quiz(models.Model):
         ('I', 'Intermediate'),
         ('A', 'Advanced'),
     ]
-    
+
     week = models.ForeignKey(
-        Week, 
-        on_delete=models.CASCADE, 
+        Week,
+        on_delete=models.CASCADE,
         related_name='quizzes'
     )
     difficulty = models.CharField(
-        max_length=1, 
+        max_length=1,
         choices=DIFFICULTY_LEVEL_CHOICES,
         default='S'
     )
@@ -230,35 +270,37 @@ class Quiz(models.Model):
     def select_questions(self, difficulty):
         week_questions = self.week.questions.exclude(question_type='coding')
         total_questions = week_questions.count()
-        
+
         # Determine how many questions to select (min 10 or 1/3 of total)
         num_questions = max(10, total_questions // 3)
-        
+
         # Get difficulty distribution based on quiz difficulty
         distribution = self.get_difficulty_distribution(difficulty)
-        
+
         selected_questions = []
-        
+
         for diff_code, percentage in distribution.items():
             count = max(1, round(num_questions * percentage / 100))
             questions = list(week_questions.filter(difficulty=diff_code))
-            
+
             # If not enough questions of this difficulty, take what's available
             count = min(count, len(questions))
-            
+
             if count > 0:
                 selected = random.sample(questions, count)
                 selected_questions.extend(selected)
-        
+
         # If we didn't get enough questions, fill with random ones
         if len(selected_questions) < num_questions:
             remaining = num_questions - len(selected_questions)
-            remaining_questions = list(set(week_questions) - set(selected_questions))
+            remaining_questions = list(
+                set(week_questions) - set(selected_questions))
             if remaining_questions:
                 selected_questions.extend(
-                    random.sample(remaining_questions, min(remaining, len(remaining_questions)))
+                    random.sample(remaining_questions, min(
+                        remaining, len(remaining_questions)))
                 )
-        
+
         return selected_questions
 
     def get_difficulty_distribution(self, difficulty):
@@ -269,7 +311,8 @@ class Quiz(models.Model):
             'I': {'B': 5, 'K': 25, 'I': 30, 'A': 25, 'E': 15},     # Intermediate
             'A': {'B': 5, 'K': 15, 'I': 30, 'A': 30, 'E': 20},     # Advanced
         }
-        return distributions.get(difficulty, distributions['S'])  # Default to Standard
+        # Default to Standard
+        return distributions.get(difficulty, distributions['S'])
 
 
 class Code(models.Model):
@@ -279,16 +322,16 @@ class Code(models.Model):
         ('H', 'Hard'),
     ]
     week = models.ForeignKey(
-        Week, 
-        on_delete=models.CASCADE, 
+        Week,
+        on_delete=models.CASCADE,
         related_name='codes'
     )
     difficulty = models.CharField(
-        max_length=1, 
+        max_length=1,
         choices=DIFFICULTY_LEVEL_CHOICES,
         default='S'
     )
-    
+
     problem_statement = models.TextField()
     solution = models.TextField()
     template_code = models.TextField()
@@ -298,4 +341,3 @@ class Code(models.Model):
         default=0,
         validators=[MinValueValidator(0), MaxValueValidator(100)]
     )
-    
