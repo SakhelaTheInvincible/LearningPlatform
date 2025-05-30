@@ -10,7 +10,7 @@ from django.core.files.base import ContentFile
 from rest_framework import generics
 from api.serializers import (OnlyCourseSerializer,
                              CourseSerializer,
-                             UserSerializer, UserSignUpSerializer, PasswordChangeSerializer, UserPublicSerializer)
+                             UserSerializer, UserSignUpSerializer, PasswordChangeSerializer, UserPublicSerializer, AdminSerializer)
 
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
@@ -78,17 +78,10 @@ class UserViewSet(mixins.
         except Exception as e:
             return Response(str(e), status=status.HTTP_400_BAD_REQUEST)
 
-        # if serializer.is_valid():
-        #     user = request.user
-        #     user.set_password(serializer.validated_data['new_password'])
-        #     user.save()
-        #     return Response({'detail': 'Password changed successfully.'})
-        # else:
-        #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 class UserSignUpViewSet(mixins.CreateModelMixin,
                         viewsets.GenericViewSet):
+    queryset = User.objects.all()
     serializer_class = UserSignUpSerializer
     authentication_classes = []
     permission_classes = [AllowAny]
@@ -105,10 +98,11 @@ class UserPublicViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 
 class AdminUserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
-    serializer_class = UserSerializer  # Or a more detailed serializer if you want
-    permission_classes = [IsAdminUser]
+    # Or a more detailed serializer if you want
+    serializer_class = AdminSerializer
+    # permission_classes = [IsAdminUser]
     parser_classes = (JSONParser, MultiPartParser, FormParser)
-    authentication_classes = [JWTAuthentication]
+    # authentication_classes = [JWTAuthentication]
 
 # ====================#
 class MaterialQuizCreateAPIView(APIView):

@@ -21,8 +21,10 @@ class User(AbstractUser):
                 if old_user.profile_picture and old_user.profile_picture != self.profile_picture:
                     old_user.profile_picture.delete(save=False)
             except User.DoesNotExist:
+
                 pass
-            super().save(*args, **kwargs)
+        super().save(*args, **kwargs)
+
 
     def is_admin(self):
         return self.is_superuser
