@@ -12,6 +12,7 @@
     "@headlessui/react": "^2.2.3",
     "@heroicons/react": "^2.2.0",
     "@monaco-editor/react": "^4.7.0",
+    "@tailwindcss/line-clamp": "^0.4.4",
     "axios": "^1.8.4",
     "next": "15.2.4",
     "postcss": "^8.5.3",
