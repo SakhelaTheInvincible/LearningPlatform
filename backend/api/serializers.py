@@ -51,6 +51,8 @@ class CourseSerializer(serializers.ModelSerializer):
 
 # USER SECTION
 # ====================#
+
+
 class PasswordChangeSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True)
@@ -76,11 +78,12 @@ class UserPublicSerializer(serializers.ModelSerializer):
 
 
 class AdminSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = User
-        fields = '__all__'
-
-
+        fields = ['id', 'username', 'email',
+                  'first_name', 'last_name', "profile_picture"]
+    #    fields = "__all__"
 
 class UserSignUpSerializer(serializers.ModelSerializer):
 

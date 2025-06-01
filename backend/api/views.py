@@ -86,6 +86,7 @@ class UserSignUpViewSet(mixins.CreateModelMixin,
     authentication_classes = []
     permission_classes = [AllowAny]
 
+
 # for testing Purposes!!!
 
 
@@ -96,15 +97,67 @@ class UserPublicViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     permission_classes = [AllowAny]
 
 
-class AdminUserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all()
+class AdminUserViewSet(mixins.ListModelMixin,
+                       mixins.CreateModelMixin,
+                       mixins.DestroyModelMixin,
+                       mixins.UpdateModelMixin,
+                       viewsets.GenericViewSet):
     # Or a more detailed serializer if you want
     serializer_class = AdminSerializer
-    # permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminUser]
     parser_classes = (JSONParser, MultiPartParser, FormParser)
-    # authentication_classes = [JWTAuthentication]
+    authentication_classes = [JWTAuthentication]
+
+    # def get_serializer_class(self, *args, **kwargs):
+    #     if self.request.method == "GET":
+    #         return AdminSerializer
+
+    def get_queryset(self):
+        # get all User except admin  and self
+
+        return User.objects.exclude(is_superuser=True).exclude(id=self.request.user.id)
+
+    @action(detail=True, methods=['put'], url_path='set_password')
+    def set_password(self, request, pk=None):
+        try:
+            queryset = User.objects.all()
+            instance = get_object_or_404(queryset, pk=pk)
+            new_password = request.data.get('new_password')
+            confirm_password = request.data.get('confirm_password')
+            if not new_password:
+                return Response({'error': 'New password is required'}, status=status.HTTP_400_BAD_REQUEST)
+            if not confirm_password:
+                return Response({'error': 'confirm_password is required'}, status=status.HTTP_400_BAD_REQUEST)
+            if new_password != confirm_password:
+                return Response({'error': 'Passwords do not match '}, status=status.HTTP_400_BAD_REQUEST)
+            instance.password = make_password(password=new_password)
+            instance.save()
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'detail': 'Password changed successfully.'}, status=status.HTTP_200_OK)
+
+    def update(self, request, pk, *args, **kwargs):
+        try:
+            queryset = User.objects.all()
+            instance = get_object_or_404(queryset, pk=pk)
+            serializer = self.get_serializer(
+                instance, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+
+            if getattr(instance, '_prefetched_objects_cache', None):
+                # If 'prefetch_related' has been applied to a queryset, we need to
+                # forcibly invalidate the prefetch cache on the instance.
+                instance._prefetched_objects_cache = {}
+        except Exception as e:
+            return Response(str(e), status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 # ====================#
+
+
 class MaterialQuizCreateAPIView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
@@ -244,8 +297,8 @@ class CourseRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     #     # May raise a permission denied
     #     self.check_object_permissions(self.request, obj)
 
-    #     return 
-    
+    #     return
+
 
 class WeekRetrieveAPIView(APIView):
     def get(self, request, title, selectedWeek):
@@ -369,4 +422,3 @@ class CodeCheckView(APIView):
             "user_score": user_score,
             "error": error
         })
-

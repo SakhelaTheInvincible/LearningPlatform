@@ -79,22 +79,17 @@ export default function AdminPage() {
   };
 
   const changeUserPassword = async () => {
-    if (
-      passwordInputs.new_password !== passwordInputs.confirm_password ||
-      !passwordModalUser
-    ) {
-      alert("Passwords do not match.");
-      return;
-    }
+
     try {
       await api.put(`/admin/users/${passwordModalUser.id}/set_password/`, {
         new_password: passwordInputs.new_password,
+        confirm_password: passwordInputs.confirm_password
       });
       alert("Password changed.");
       setPasswordModalUser(null);
       setPasswordInputs({ new_password: "", confirm_password: "" });
-    } catch (err) {
-      alert("Failed to change password.");
+    } catch (err: any) {
+      alert("Password Change failed: " + (err.response?.data.error || err.message));
     }
   };
 
@@ -106,7 +101,7 @@ export default function AdminPage() {
       <Header />
       <div className="mt-[60px] px-6 py-8 space-y-10 w-full max-w-screen-xl mx-auto">
         <h1 className="text-2xl font-bold text-center">
-          Admin User Management
+          Admin User Management Panel
         </h1>
         <div className=""></div>
         {users.map((user) => (
@@ -217,7 +212,7 @@ export default function AdminPage() {
               >
                 <Dialog.Panel className="w-full max-w-md bg-white rounded-lg p-6 shadow-xl space-y-4">
                   <Dialog.Title className="text-lg font-semibold">
-                    Change Password for {passwordModalUser?.username}
+                    Change Password for {passwordModalUser?.userid}
                   </Dialog.Title>
                   <input
                     type="password"
