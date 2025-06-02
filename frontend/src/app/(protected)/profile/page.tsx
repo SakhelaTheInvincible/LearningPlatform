@@ -5,7 +5,7 @@ import Image from "next/image";
 import ProfileInfoCard from "@/src/components/ProfileInfoCard";
 import api from "@/src/lib/axios";
 import { useRouter } from "next/navigation";
-
+import Link from "next/link";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -38,7 +38,7 @@ export default function ProfilePage() {
         setUser(res.data);
       } catch (err: any) {
         setError("Failed to load user profile");
-        router.replace('/login')
+        router.replace("/login");
       } finally {
         setLoading(false);
       }
@@ -50,7 +50,10 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (file) {
       setImageFile(file);
-      setUser((prev) => ({ ...prev, profile_picture: URL.createObjectURL(file) }));
+      setUser((prev) => ({
+        ...prev,
+        profile_picture: URL.createObjectURL(file),
+      }));
     }
   };
 
@@ -96,9 +99,15 @@ export default function ProfilePage() {
       });
       setPasswordSuccess("Password changed successfully.");
       setShowPasswordModal(false);
-      setPasswordForm({ current_password: "", new_password: "", confirm_new_password: "" });
+      setPasswordForm({
+        current_password: "",
+        new_password: "",
+        confirm_new_password: "",
+      });
     } catch (err: any) {
-      setPasswordError("Failed to change password. Please check your current password.");
+      setPasswordError(
+        "Failed to change password. Please check your current password."
+      );
     } finally {
       setLoading(false);
     }
@@ -118,7 +127,9 @@ export default function ProfilePage() {
               <h2 className="text-xl font-bold mb-4">Personal Details</h2>
               <div className="w-32 h-32 mb-4">
                 <Image
-                  src={user.profile_picture || "/profile/Profile-placeholder.png"}
+                  src={
+                    user.profile_picture || "/profile/Profile-placeholder.png"
+                  }
                   alt="Profile Picture"
                   width={128}
                   height={128}
@@ -137,7 +148,9 @@ export default function ProfilePage() {
               </label>
               <button
                 className="mt-2 bg-indigo-500 text-white px-4 py-1 rounded hover:bg-indigo-700"
-                onClick={() => updateField("profile_picture", user.profile_picture)}
+                onClick={() =>
+                  updateField("profile_picture", user.profile_picture)
+                }
                 disabled={!imageFile}
               >
                 Save Image
@@ -176,6 +189,13 @@ export default function ProfilePage() {
               >
                 Change Password
               </button>
+
+              <div className="mt-4 text-sm">
+                <Link href="/admin" className="text-indigo-600 hover:underline">
+                  Go to Admin Page
+                </Link>
+              </div>
+
               {/* Password Change Modal */}
               {showPasswordModal && (
                 <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
@@ -189,37 +209,66 @@ export default function ProfilePage() {
                     <h3 className="text-lg font-bold mb-4">Change Password</h3>
                     <form onSubmit={handlePasswordChange} className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium mb-1">Current Password</label>
+                        <label className="block text-sm font-medium mb-1">
+                          Current Password
+                        </label>
                         <input
                           type="password"
                           className="w-full border border-gray-300 rounded px-3 py-2"
                           value={passwordForm.current_password}
-                          onChange={e => setPasswordForm(f => ({ ...f, current_password: e.target.value }))}
+                          onChange={(e) =>
+                            setPasswordForm((f) => ({
+                              ...f,
+                              current_password: e.target.value,
+                            }))
+                          }
                           required
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1">New Password</label>
+                        <label className="block text-sm font-medium mb-1">
+                          New Password
+                        </label>
                         <input
                           type="password"
                           className="w-full border border-gray-300 rounded px-3 py-2"
                           value={passwordForm.new_password}
-                          onChange={e => setPasswordForm(f => ({ ...f, new_password: e.target.value }))}
+                          onChange={(e) =>
+                            setPasswordForm((f) => ({
+                              ...f,
+                              new_password: e.target.value,
+                            }))
+                          }
                           required
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1">Confirm New Password</label>
+                        <label className="block text-sm font-medium mb-1">
+                          Confirm New Password
+                        </label>
                         <input
                           type="password"
                           className="w-full border border-gray-300 rounded px-3 py-2"
                           value={passwordForm.confirm_new_password}
-                          onChange={e => setPasswordForm(f => ({ ...f, confirm_new_password: e.target.value }))}
+                          onChange={(e) =>
+                            setPasswordForm((f) => ({
+                              ...f,
+                              confirm_new_password: e.target.value,
+                            }))
+                          }
                           required
                         />
                       </div>
-                      {passwordError && <div className="text-red-500 text-sm">{passwordError}</div>}
-                      {passwordSuccess && <div className="text-green-600 text-sm">{passwordSuccess}</div>}
+                      {passwordError && (
+                        <div className="text-red-500 text-sm">
+                          {passwordError}
+                        </div>
+                      )}
+                      {passwordSuccess && (
+                        <div className="text-green-600 text-sm">
+                          {passwordSuccess}
+                        </div>
+                      )}
                       <button
                         type="submit"
                         className="w-full bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"

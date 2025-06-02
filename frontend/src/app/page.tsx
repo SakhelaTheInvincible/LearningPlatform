@@ -4,22 +4,10 @@ import axios from "axios";
 import AnimatedWrapper from "../components/layout/AnimatedWrapper";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 
 export default function Home() {
   const [message, setMessage] = useState("Loading...");
   const [error, setError] = useState("");
-
-  const router = useRouter();
-
-  const handleLogout = () => {
-    // Clear tokens from local storage
-    localStorage.removeItem('access');
-    localStorage.removeItem('refresh');
-
-    // Optionally redirect to login or home page
-    router.push('/'); // or router.push('/');
-  };
 
   // placeholder
   const backend = false;
@@ -94,18 +82,6 @@ export default function Home() {
               >
                 Browse Courses
               </Link>
-
-            </div>
-
-
-            <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm space-y-4">
-              <button
-                onClick={handleLogout}
-                className="block w-full text-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-              >
-                Logout
-              </button>
-
             </div>
           </div>
         </div>

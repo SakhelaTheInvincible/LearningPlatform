@@ -5,6 +5,7 @@ import Image from "next/image";
 import ProfileInfoCard from "@/src/components/ProfileInfoCard";
 import api from "@/src/lib/axios";
 import { Dialog, Transition } from "@headlessui/react";
+import SignupDialog from "@/src/components/SignupDialog";
 
 export default function AdminPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -18,23 +19,27 @@ export default function AdminPage() {
     new_password: "",
     confirm_password: "",
   });
+  const [open, setOpen] = useState(false);
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get("/admin/users/");
+      setUsers(res.data);
+    } catch (err) {
+      setError("Failed to load users.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      setLoading(true);
-      try {
-        const res = await api.get("/admin/users/");
-        setUsers(res.data);
-      } catch (err) {
-        setError("Failed to load users.");
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchUsers();
   }, []);
 
   const updateField = async (userId: number, field: string, value: string) => {
+    const scrollY = window.scrollY;
+
     const formData = new FormData();
     if (field === "profile_picture" && imageFiles[userId]) {
       formData.append("profile_picture", imageFiles[userId]!);
@@ -50,6 +55,13 @@ export default function AdminPage() {
       setUsers((prev) =>
         prev.map((user) => (user.id === userId ? res.data : user))
       );
+
+      // Restore scroll position after the DOM updates
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: scrollY, behavior: "auto" });
+        });
+      });
     } catch (err) {
       alert("Failed to update user");
     } finally {
@@ -79,17 +91,18 @@ export default function AdminPage() {
   };
 
   const changeUserPassword = async () => {
-
     try {
       await api.put(`/admin/users/${passwordModalUser.id}/set_password/`, {
         new_password: passwordInputs.new_password,
-        confirm_password: passwordInputs.confirm_password
+        confirm_password: passwordInputs.confirm_password,
       });
       alert("Password changed.");
       setPasswordModalUser(null);
       setPasswordInputs({ new_password: "", confirm_password: "" });
     } catch (err: any) {
-      alert("Password Change failed: " + (err.response?.data.error || err.message));
+      alert(
+        "Password Change failed: " + (err.response?.data.error || err.message)
+      );
     }
   };
 
@@ -104,6 +117,23 @@ export default function AdminPage() {
           Admin User Management Panel
         </h1>
         <div className=""></div>
+        <div className="p-10">
+          <button
+            onClick={() => setOpen(true)}
+            className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+          >
+            Create a new user
+          </button>
+
+          <SignupDialog
+            open={open}
+            onClose={() => setOpen(false)}
+            onSuccess={() => {
+              fetchUsers();
+              setOpen(false);
+            }}
+          />
+        </div>
         {users.map((user) => (
           <div
             key={user.id}
