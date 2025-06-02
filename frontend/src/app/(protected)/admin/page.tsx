@@ -1,14 +1,17 @@
 "use client";
-import { useEffect, useState, Fragment } from "react";
+import { useEffect, useState, Fragment, useRef } from "react";
 import Header from "@/src/components/Header";
 import Image from "next/image";
 import ProfileInfoCard from "@/src/components/ProfileInfoCard";
 import api from "@/src/lib/axios";
 import { Dialog, Transition } from "@headlessui/react";
 import SignupDialog from "@/src/components/SignupDialog";
+import { Listbox } from "@headlessui/react";
+import { CheckIcon, ChevronUpDownIcon } from "@heroicons/react/20/solid";
 
 export default function AdminPage() {
   const [search, setSearch] = useState("");
+  const [orderBy, setOrderBy] = useState("username");
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -21,6 +24,13 @@ export default function AdminPage() {
     confirm_password: "",
   });
   const [open, setOpen] = useState(false);
+
+  const sortOptions = [
+    { label: "Username", value: "username" },
+    { label: "First Name", value: "first_name" },
+    { label: "Last Name", value: "last_name" },
+    { label: "Email", value: "email" },
+  ];
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -37,9 +47,6 @@ export default function AdminPage() {
   useEffect(() => {
     fetchUsers();
   }, []);
-
-
-
 
   const updateField = async (userId: number, field: string, value: string) => {
     const scrollY = window.scrollY;
@@ -73,11 +80,12 @@ export default function AdminPage() {
     }
   };
 
-
   const fetchFilteredUsers = async (username: string, order_by: string) => {
     setLoading(true);
     try {
-      const res = await api.get(`/admin/users/filter/?username=${username}& order_by = ${order_by}`);
+      const res = await api.get(
+        `/admin/users/filter/?username=${username}&order_by=${order_by}`
+      );
       setUsers(res.data);
     } catch (err) {
       setError("Failed to load users.");
@@ -85,7 +93,6 @@ export default function AdminPage() {
       setLoading(false);
     }
   };
-
 
   const handleImageUpload = (userId: number, file: File) => {
     setImageFiles((prev) => ({ ...prev, [userId]: file }));
@@ -152,19 +159,86 @@ export default function AdminPage() {
             }}
           />
         </div>
-        <input
-          type="text"
-          placeholder="Search by username"
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            fetchFilteredUsers(e.target.value); // Search as you type!
-          }}
-          className="border px-3 py-2 rounded w-full max-w-xs"
-        />
 
+        <div className="flex flex-row items-center">
+          {/* Search Input */}
+          <input
+            type="text"
+            placeholder="Search by username"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                fetchFilteredUsers(search, orderBy);
+              }
+            }}
+            className="border border-gray-500 px-4 py-[10px] rounded-md w-full max-w-xs text-sm"
+          />
 
+          {/* Order By Dropdown */}
+          <div className="ml-4 w-full max-w-xs">
+            <Listbox
+              value={orderBy}
+              onChange={(val) => {
+                setOrderBy(val);
+                fetchFilteredUsers(search, val);
+              }}
+            >
+              <div className="relative">
+                {/* Button */}
+                <Listbox.Button className="relative w-full cursor-default rounded-md bg-indigo-600 py-[10px] pl-4 pr-10 text-left text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm">
+                  <span className="block truncate">
+                    Order by:{" "}
+                    {sortOptions.find((o) => o.value === orderBy)?.label}
+                  </span>
+                  <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+                    <ChevronUpDownIcon
+                      className="h-5 w-5 text-indigo-200"
+                      aria-hidden="true"
+                    />
+                  </span>
+                </Listbox.Button>
 
+                {/* Options */}
+                <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/10 focus:outline-none sm:text-sm z-50">
+                  {sortOptions.map((option) => (
+                    <Listbox.Option
+                      key={option.value}
+                      value={option.value}
+                      className={({ active }) =>
+                        `relative cursor-default select-none py-2 pl-4 pr-10 ${
+                          active
+                            ? "bg-indigo-100 text-indigo-900"
+                            : "text-gray-900"
+                        }`
+                      }
+                    >
+                      {({ selected }) => (
+                        <>
+                          <span
+                            className={`block truncate ${
+                              selected ? "font-medium" : "font-normal"
+                            }`}
+                          >
+                            {option.label}
+                          </span>
+                          {selected ? (
+                            <span className="absolute inset-y-0 right-2 flex items-center text-indigo-600">
+                              <CheckIcon
+                                className="h-5 w-5"
+                                aria-hidden="true"
+                              />
+                            </span>
+                          ) : null}
+                        </>
+                      )}
+                    </Listbox.Option>
+                  ))}
+                </Listbox.Options>
+              </div>
+            </Listbox>
+          </div>
+        </div>
 
         {users.map((user) => (
           <div
