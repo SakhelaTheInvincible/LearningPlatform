@@ -8,6 +8,7 @@ import { Dialog, Transition } from "@headlessui/react";
 import SignupDialog from "@/src/components/SignupDialog";
 
 export default function AdminPage() {
+  const [search, setSearch] = useState("");
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -36,6 +37,9 @@ export default function AdminPage() {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+
+
 
   const updateField = async (userId: number, field: string, value: string) => {
     const scrollY = window.scrollY;
@@ -68,6 +72,20 @@ export default function AdminPage() {
       setLoading(false);
     }
   };
+
+
+  const fetchFilteredUsers = async (username: string, order_by: string) => {
+    setLoading(true);
+    try {
+      const res = await api.get(`/admin/users/filter/?username=${username}& order_by = ${order_by}`);
+      setUsers(res.data);
+    } catch (err) {
+      setError("Failed to load users.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const handleImageUpload = (userId: number, file: File) => {
     setImageFiles((prev) => ({ ...prev, [userId]: file }));
@@ -134,6 +152,20 @@ export default function AdminPage() {
             }}
           />
         </div>
+        <input
+          type="text"
+          placeholder="Search by username"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            fetchFilteredUsers(e.target.value); // Search as you type!
+          }}
+          className="border px-3 py-2 rounded w-full max-w-xs"
+        />
+
+
+
+
         {users.map((user) => (
           <div
             key={user.id}

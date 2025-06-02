@@ -98,7 +98,6 @@ class UserPublicViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 
 
 class AdminUserViewSet(mixins.ListModelMixin,
-                       mixins.CreateModelMixin,
                        mixins.DestroyModelMixin,
                        mixins.UpdateModelMixin,
                        viewsets.GenericViewSet):
@@ -108,14 +107,27 @@ class AdminUserViewSet(mixins.ListModelMixin,
     parser_classes = (JSONParser, MultiPartParser, FormParser)
     authentication_classes = [JWTAuthentication]
 
-    # def get_serializer_class(self, *args, **kwargs):
-    #     if self.request.method == "GET":
-    #         return AdminSerializer
-
     def get_queryset(self):
         # get all User except admin  and self
-
         return User.objects.exclude(is_superuser=True).exclude(id=self.request.user.id)
+
+    @action(detail=False, methods=["GET"], url_path='filter')
+    def filter(self, request, *args, **kwargs):
+        username = request.query_params.get("username", "")
+        order_by = request.query_params.get("order_by", "date_joined")
+        try:
+            queryset = User.objects.exclude(is_superuser=True).exclude(
+                id=self.request.user.id).filter(username__icontains=username).order_by(f'-{order_by}')
+            page = self.paginate_queryset(queryset)
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                return self.get_paginated_response(serializer.data)
+
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=['put'], url_path='set_password')
     def set_password(self, request, pk=None):
@@ -154,6 +166,12 @@ class AdminUserViewSet(mixins.ListModelMixin,
             return Response(str(e), status=status.HTTP_400_BAD_REQUEST)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        def destroy(self, request, pk, *args, **kwargs):
+            queryset = User.objects.all()
+            instance = get_object_or_404(queryset, pk=pk)
+            self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 # ====================#
 
