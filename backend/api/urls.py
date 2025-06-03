@@ -1,6 +1,6 @@
 from django.urls import path, include
 from .views import (OnlyCourseListAPIView, OnlyCourseCreateAPIView, MaterialQuizCreateAPIView, CourseRetrieveUpdateDestroyAPIView,
-                    WeekRetrieveAPIView, QuizAnswerCheckView, CodeCheckView)
+                    WeekRetrieveAPIView, QuizAnswerCheckView, CodeCheckView, MaterialViewSet)
 
 
 from api.views import (
@@ -8,6 +8,8 @@ from api.views import (
     UserSignUpViewSet,
     UserPublicViewSet,
     AdminUserViewSet,
+    CourseViewSet,
+    WeekViewSet
 )
 from rest_framework.routers import DefaultRouter
 
@@ -22,7 +24,11 @@ router.register(r'users', UserViewSet, basename='user')
 router.register(r'signup', UserSignUpViewSet, basename='signup')
 router.register(r'admin/users', AdminUserViewSet, basename='admin-user')
 
-
+router.register(r'courses', CourseViewSet, basename='course')
+router.register(
+    r'courses/(?P<title_slug>[\w-]+)/weeks', WeekViewSet, basename='course-weeks')
+router.register(
+    r'courses/(?P<title_slug>[\w-]+)/weeks/(?P<week_number>\d+)/materials', MaterialViewSet, basename='course-weeks-material')
 urlpatterns = [
     path('', include(router.urls)),
 
@@ -38,7 +44,7 @@ urlpatterns = [
     path('courses/<str:title>/week/<int:selectedWeek>/code/check/', CodeCheckView.as_view(),
          name='code-check'),
 
-    path('courses/', OnlyCourseListAPIView.as_view(), name='courses-list'),
+    #     path('courses/', OnlyCourseListAPIView.as_view(), name='courses-list'),
     path('course/upload/', OnlyCourseCreateAPIView.as_view(), name='courses-create'),
 
     path('course/upload/<str:courseTitle>/week/<int:selectedWeek>/',

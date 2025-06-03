@@ -2,56 +2,12 @@ from rest_framework import serializers
 from .models import Course, Week, Question, Material, User, Quiz, Code
 from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.auth.password_validation import validate_password
+from django.utils.text import slugify
 
-
-class MaterialSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Material
-        fields = ['title', 'description', 'summarized_material']
-
-
-class QuestionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Question
-        fields = ['id', 'question_text', 'difficulty',
-                  'question_type', 'answer', 'explanation']
-
-
-class QuizSerializer(serializers.ModelSerializer):
-    questions = QuestionSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = Quiz
-        fields = ['id', 'difficulty', 'user_score', 'created_at', 'questions']
-
-
-class CodeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Code
-        fields = '__all__'
-
-
-class WeekSerializer(serializers.ModelSerializer):
-    materials = MaterialSerializer(many=True, read_only=True)
-    quizzes = QuizSerializer(many=True, read_only=True)
-    codes = CodeSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = Week
-        fields = ['week_number', 'materials', 'quizzes', 'is_completed']
-
-
-class CourseSerializer(serializers.ModelSerializer):
-    weeks = WeekSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = Course
-        fields = ['title', 'description', 'image',
-                  'duration_weeks', 'weeks', 'language', 'is_completed']
 
 # USER SECTION
-# ====================#
 
+# ====================#
 
 class PasswordChangeSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True)
@@ -84,6 +40,7 @@ class AdminSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email',
                   'first_name', 'last_name', "profile_picture"]
     #    fields = "__all__"
+
 
 class UserSignUpSerializer(serializers.ModelSerializer):
 
@@ -138,16 +95,112 @@ class UserSerializer(serializers.ModelSerializer):
 # ====================#
 
 
+# Material Section
+# ====================#
+class MaterialSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Material
+        fields = ['title', 'description', 'summarized_material']
+
+
+class MaterialCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Material
+        fields = ['title', 'description', 'material',
+                  'summarized_material', 'week']
+
+# ====================#
+
+
 class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
+        fields = ['id', 'question_text', 'difficulty',
+                  'question_type', 'answer', 'explanation']
+
+
+class QuizSerializer(serializers.ModelSerializer):
+    questions = QuestionSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Quiz
+        fields = ['id', 'difficulty', 'user_score', 'created_at', 'questions']
+
+
+class CodeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Code
         fields = '__all__'
+
+
+# Week Section
+# ====================#
+class WeekSerializer(serializers.ModelSerializer):
+    materials = MaterialSerializer(many=True, read_only=True)
+    quizzes = QuizSerializer(many=True, read_only=True)
+    codes = CodeSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Week
+        fields = ['week_number', 'materials', 'quizzes', 'is_completed']
+
+
+class WeekCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Week
+        fields = ['week_number', 'course']  # 'course' will be set in the view
+
+# ====================#
+
+
+# Course Section
+# ====================#
+class CourseSerializer(serializers.ModelSerializer):
+    weeks = WeekSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Course
+        fields = ['title', 'description', 'image',
+                  'duration_weeks', 'weeks', 'language', 'is_completed']
+
+
+class CourseCreateSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    title_slug = serializers.SlugField(read_only=True)
+
+    class Meta:
+        model = Course
+        fields = ['title', 'title_slug', 'duration_weeks',
+                  'description', 'user', 'image']
+
+    def create(self, validated_data):
+        title = validated_data.get('title', "")
+        validated_data['title_slug'] = slugify(title)
+        return super().create(validated_data)
+
+
+class CourseListSerializer(serializers.ModelSerializer):
+    title_slug = serializers.SlugField(read_only=True)
+
+    class Meta:
+        model = Course
+        fields = ['id', 'title', 'title_slug', 'duration_weeks', 'description',
+                  'image', 'is_completed']
 
 
 class OnlyCourseSerializer(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    title_slug = serializers.SlugField(read_only=True)
 
     class Meta:
         model = Course
-        fields = ['id', 'title', 'duration_weeks', 'description', 'user',
+        fields = ['id', 'title', 'title_slug', 'duration_weeks', 'description', 'user',
                   'image', 'language', 'is_completed']
+
+# ====================#
+
+
+class QuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Question
+        fields = '__all__'

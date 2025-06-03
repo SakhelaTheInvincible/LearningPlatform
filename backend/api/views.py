@@ -10,7 +10,9 @@ from django.core.files.base import ContentFile
 from rest_framework import generics
 from api.serializers import (OnlyCourseSerializer,
                              CourseSerializer,
-                             UserSerializer, UserSignUpSerializer, PasswordChangeSerializer, UserPublicSerializer, AdminSerializer)
+                             UserSerializer, UserSignUpSerializer,
+                             PasswordChangeSerializer, UserPublicSerializer, AdminSerializer, CourseCreateSerializer,
+                             CourseListSerializer, WeekCreateSerializer, MaterialCreateSerializer)
 
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
@@ -82,9 +84,9 @@ class UserViewSet(mixins.
 class UserSignUpViewSet(mixins.CreateModelMixin,
                         viewsets.GenericViewSet):
     queryset = User.objects.all()
-    serializer_class = UserSignUpSerializer
     authentication_classes = []
     permission_classes = [AllowAny]
+    serializer_class = UserSignUpSerializer
 
 
 # for testing Purposes!!!
@@ -103,9 +105,9 @@ class AdminUserViewSet(mixins.ListModelMixin,
                        viewsets.GenericViewSet):
     # Or a more detailed serializer if you want
     serializer_class = AdminSerializer
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAdminUser]
     parser_classes = (JSONParser, MultiPartParser, FormParser)
-    authentication_classes = [JWTAuthentication]
 
     def get_queryset(self):
         # get all User except admin  and self
@@ -167,11 +169,114 @@ class AdminUserViewSet(mixins.ListModelMixin,
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-        def destroy(self, request, pk, *args, **kwargs):
-            queryset = User.objects.all()
-            instance = get_object_or_404(queryset, pk=pk)
-            self.perform_destroy(instance)
+    def destroy(self, request, pk, *args, **kwargs):
+        queryset = User.objects.all()
+        instance = get_object_or_404(queryset, pk=pk)
+        self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+# ====================#
+
+# Course section
+# ====================#
+
+
+class CourseViewSet(mixins.CreateModelMixin,
+                    mixins.ListModelMixin,
+                    viewsets.GenericViewSet):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return CourseCreateSerializer
+        else:
+            return CourseListSerializer
+
+    def get_queryset(self):
+        self.queryset = Course.objects.filter(user=self.request.user)
+        # self.queryset = Course.objects.all()
+        return super().get_queryset()
+# ====================#
+
+
+# Week section
+# ====================#
+
+class WeekViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    serializer_class = WeekCreateSerializer
+    # authentication_classes = [JWTAuthentication]
+    # permission_classes = [IsAuthenticated]
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
+
+    def create(self, request, *args, **kwargs):
+        user = request.user
+        queryset = Course.objects.all()
+        title_slug = self.kwargs['title_slug']
+        course = get_object_or_404(queryset, title_slug=title_slug)
+
+        if course.user != user:
+            return Response({'detail': 'Not allowed to add weeks to this course.'}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(course=course)
+
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+
+# ====================#
+
+
+# Material section
+# ====================#
+class MaterialViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    serializer_class = MaterialCreateSerializer
+    # authentication_classes = [JWTAuthentication]
+    # permission_classes = [IsAuthenticated]
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
+
+    def create(self, request, *args, **kwargs):
+        user = request.user
+        queryset = Course.objects.all()
+        title_slug = self.kwargs['title_slug']
+        week_number = self.kwargs['week_number']
+        course = get_object_or_404(queryset, title_slug=title_slug)
+
+        if course.user != user:
+            return Response({'detail': 'Not allowed to add weeks to this course.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # get the correct week
+        queryset = Week.objects.all()
+        week = get_object_or_404(
+            queryset, course=course, week_number=week_number)
+        # we know  that request
+        file = request.FILES.get('material')
+
+        file_path = default_storage.save(
+            f'temp_{file.name}', ContentFile(file.read()))
+        full_file_path = os.path.join(settings.MEDIA_ROOT, file_path)
+
+        try:
+            material = extract_text(full_file_path)
+            summarized_material = generate_material_summary(
+                material=material)
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+
+            serializer.save(material=material,
+                            summarized_material=summarized_material, week=week)
+
+            headers = self.get_success_headers(serializer.data)
+        finally:
+            # Clean up temp file
+            if os.path.exists(full_file_path):
+                os.remove(full_file_path)
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
 
 # ====================#
 

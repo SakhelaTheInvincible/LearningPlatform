@@ -146,7 +146,6 @@ class Week(models.Model):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         incomplete_weeks = self.course.weeks.filter(is_completed=False).count()
-        self.course.weeks.fil
         self.course.is_completed = (incomplete_weeks == 0)
         self.course.save()
 
