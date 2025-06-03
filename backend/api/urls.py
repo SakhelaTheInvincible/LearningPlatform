@@ -29,6 +29,8 @@ router.register(
     r'courses/(?P<title_slug>[\w-]+)/weeks', WeekViewSet, basename='course-weeks')
 router.register(
     r'courses/(?P<title_slug>[\w-]+)/weeks/(?P<week_number>\d+)/materials', MaterialViewSet, basename='course-weeks-material')
+
+# add pagination to admin panel
 urlpatterns = [
     path('', include(router.urls)),
 

@@ -5,7 +5,7 @@ import Image from "next/image";
 interface Course {
   id: number;
   title: string;
-  slug: string;
+  title_slug: string;
   description: string;
   level: string;
   image: string;
@@ -20,7 +20,10 @@ interface CourseCardProps {
 const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
   return (
     <div className="h-full">
-      <Link href={`/courses/${course.title}`} className="group block h-full">
+      <Link
+        href={`/courses/${course.title_slug}`}
+        className="group block h-full"
+      >
         <div className="bg-white rounded-2xl shadow overflow-hidden transition-transform transform group-hover:scale-105 duration-300 ease-in-out cursor-pointer flex flex-col h-full">
           <Image
             src={course.image || "/courses/default.jpg"}

@@ -25,6 +25,7 @@ export default function UploadCourseDialog({
   const [materialTitle, setMaterialTitle] = useState("");
   const [materialDescription, setMaterialDescription] = useState("");
   const [uploadedWeeks, setUploadedWeeks] = useState<Set<number>>(new Set());
+  const [slug, setSlug] = useState("");
 
   const handleCourseUpload = async () => {
     const formData = new FormData();
@@ -34,11 +35,12 @@ export default function UploadCourseDialog({
     if (image) formData.append("image", image);
 
     try {
-      await api.post("/course/upload/", formData, {
+      const res = await api.post("/courses/", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setWeeks(duration);
       setWeeksDialogOpen(true);
+      setSlug(res.data.title_slug);
     } catch (err) {
       console.error("Error uploading course:", err);
     }
@@ -49,17 +51,32 @@ export default function UploadCourseDialog({
     setMaterialDialogOpen(true);
   };
 
+  const handleWeekUpload = async () => {
+    if (!material || selectedWeek === null) return;
+
+    const formData = new FormData();
+    formData.append("week_number", `${selectedWeek}`);
+
+    try {
+      await api.post(`/courses/${slug}/weeks/`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    } catch (err) {
+      console.error("Error uploading material:", err);
+    }
+  };
+
   const handleMaterialUpload = async () => {
     if (!material || selectedWeek === null) return;
 
     const formData = new FormData();
-    formData.append("file", material);
+    formData.append("material", material);
     formData.append("title", materialTitle);
     formData.append("description", materialDescription);
 
     try {
       await api.post(
-        `/course/upload/${courseTitle}/week/${selectedWeek}/`,
+        `/courses/${slug}/weeks/${selectedWeek}/materials/`,
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
@@ -307,7 +324,10 @@ export default function UploadCourseDialog({
                   )}
                   <div className="mt-6">
                     <button
-                      onClick={handleMaterialUpload}
+                      onClick={async () => {
+                        await handleWeekUpload();
+                        await handleMaterialUpload();
+                      }}
                       className="w-full rounded bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-500"
                     >
                       Upload Material

@@ -106,8 +106,7 @@ class MaterialSerializer(serializers.ModelSerializer):
 class MaterialCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Material
-        fields = ['title', 'description', 'material',
-                  'summarized_material', 'week']
+        fields = ['title', 'description']
 
 # ====================#
 
@@ -148,7 +147,7 @@ class WeekSerializer(serializers.ModelSerializer):
 class WeekCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Week
-        fields = ['week_number', 'course']  # 'course' will be set in the view
+        fields = ['week_number']  # 'course' will be set in the view
 
 # ====================#
 
@@ -175,6 +174,7 @@ class CourseCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         title = validated_data.get('title', "")
+        # add id to title for slugify
         validated_data['title_slug'] = slugify(title)
         return super().create(validated_data)
 

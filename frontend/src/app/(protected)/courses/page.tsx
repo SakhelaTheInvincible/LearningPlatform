@@ -5,11 +5,12 @@ import Link from "next/link";
 import Header from "@/src/components/Header";
 import CourseCard from "@/src/components/CourseCard";
 import UploadCourseDialog from "@/src/components/CourseUploadDialog";
+import api from "@/src/lib/axios";
 
 interface Course {
   id: number;
   title: string;
-  slug: string;
+  title_slug: string;
   description: string;
   level: string;
   image: string;
@@ -25,9 +26,9 @@ export default function CoursesPage() {
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:8000/api/courses/");
-        const data = await res.json();
-        setCourses(data);
+        const res = await api.get("/courses/");
+        console.log(res.data);
+        setCourses(res.data);
       } catch (err) {
         console.error("Failed to fetch courses:", err);
       } finally {
