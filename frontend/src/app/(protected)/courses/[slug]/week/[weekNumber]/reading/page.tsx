@@ -48,7 +48,7 @@ export default function WeekReading() {
   useEffect(() => {
     async function fetchCourse() {
       try {
-        const res = await api.get(`/courses/${slug}/week/${weekNumber}`);
+        const res = await api.get(`/courses/${slug}/weeks/${weekNumber}`);
         const data = res.data;
         setMaterial(data);
       } catch (error) {

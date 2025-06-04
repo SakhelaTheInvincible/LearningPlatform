@@ -260,7 +260,11 @@ class CourseViewSet(mixins.CreateModelMixin,
 class WeekViewSet(mixins.CreateModelMixin,
                   mixins.RetrieveModelMixin,
                   viewsets.GenericViewSet):
-    serializer_class = WeekCreateSerializer
+    queryset = Week.objects.all()
+    lookup_field = 'week_number'
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
 
     def get_serializer_class(self):
 
@@ -270,9 +274,6 @@ class WeekViewSet(mixins.CreateModelMixin,
             return WeekSerializer
         else:
             return super().get_serializer_class()
-    # authentication_classes = [JWTAuthentication]
-    # permission_classes = [IsAuthenticated]
-    parser_classes = (JSONParser, MultiPartParser, FormParser)
 
     def create(self, request, *args, **kwargs):
         user = request.user
@@ -289,6 +290,17 @@ class WeekViewSet(mixins.CreateModelMixin,
 
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def get_object(self):
+        queryset = self.get_queryset()
+        title_slug = self.kwargs['title_slug']
+        week_number = self.kwargs[self.lookup_field]
+        course = get_object_or_404(
+            Course, title_slug=title_slug, user=self.request.user)
+        obj = get_object_or_404(queryset, course=course,
+                                week_number=week_number)
+        self.check_object_permissions(self.request, obj)
+        return obj
 
 
 # ====================#
