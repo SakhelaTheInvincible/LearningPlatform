@@ -3,7 +3,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.models import AbstractUser
 from django.db import transaction
 import random
-
+from django.utils.text import slugify
 
 class User(AbstractUser):
     profile_picture = models.ImageField(
@@ -63,8 +63,19 @@ class Course(models.Model):
     #         models.Index(fields=['title']),
     #     ]
 
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            super().save(*args, **kwargs)
+            self.title_slug = f'{slugify(self.title)}-{self.pk}'
+            return super().save(update_fields=['title_slug'])
+        else:
+            self.title_slug = f'{slugify(self.title)}-{self.pk}'
+            return super().save(update_fields=['title_slug'])
+
     def __str__(self):
-        return self.title
+        return self.title_slug
+
+
 
     # def clone_to_user(self, user):
         with transaction.atomic():

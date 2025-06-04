@@ -115,11 +115,16 @@ class AdminUserViewSet(mixins.ListModelMixin,
 
     @action(detail=False, methods=["GET"], url_path='filter')
     def filter(self, request, *args, **kwargs):
-        username = request.query_params.get("username", "")
+        username = request.query_params.get("username", None)
         order_by = request.query_params.get("order_by", "date_joined")
         try:
-            queryset = User.objects.exclude(is_superuser=True).exclude(
-                id=self.request.user.id).filter(username__icontains=username).order_by(f'-{order_by}')
+            if username:
+                queryset = User.objects.exclude(is_superuser=True).exclude(
+                    id=self.request.user.id).filter(username__icontains=username).order_by(f'-{order_by}')
+            else:
+                queryset = User.objects.exclude(is_superuser=True).exclude(
+                    id=self.request.user.id).order_by(f'-{order_by}')
+
             page = self.paginate_queryset(queryset)
             if page is not None:
                 serializer = self.get_serializer(page, many=True)
@@ -180,7 +185,6 @@ class AdminUserViewSet(mixins.ListModelMixin,
 # Course section
 # ====================#
 
-
 class CourseViewSet(mixins.CreateModelMixin,
                     mixins.ListModelMixin,
                     viewsets.GenericViewSet):
@@ -198,6 +202,32 @@ class CourseViewSet(mixins.CreateModelMixin,
         self.queryset = Course.objects.filter(user=self.request.user)
         # self.queryset = Course.objects.all()
         return super().get_queryset()
+
+    @action(detail=False, methods=["GET"], url_path='filter')
+    def filter(self, request, *args, **kwargs):
+        title = request.query_params.get("title", None)
+        order_by = request.query_params.get("order_by", "created_at")
+        try:
+            user = request.user
+            if title:
+                queryset = Course.objects.filter(
+                    user=user, title__icontains=title).order_by(f'-{order_by}')
+            else:
+                queryset = Course.objects.filter(
+                    user=user).order_by(f'-{order_by}')
+
+            page = self.paginate_queryset(queryset)
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                return self.get_paginated_response(serializer.data)
+
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
 # ====================#
 
 

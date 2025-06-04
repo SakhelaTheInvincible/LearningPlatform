@@ -172,11 +172,11 @@ class CourseCreateSerializer(serializers.ModelSerializer):
         fields = ['title', 'title_slug', 'duration_weeks',
                   'description', 'user', 'image']
 
-    def create(self, validated_data):
-        title = validated_data.get('title', "")
-        # add id to title for slugify
-        validated_data['title_slug'] = slugify(title)
-        return super().create(validated_data)
+    # def create(self, validated_data):
+    #     title = validated_data.get('title', "")
+    #     # add id to title for slugify
+    #     validated_data['title_slug'] = slugify(title)
+    #     return super().create(validated_data)
 
 
 class CourseListSerializer(serializers.ModelSerializer):
