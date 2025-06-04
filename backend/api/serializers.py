@@ -137,7 +137,7 @@ class CodeSerializer(serializers.ModelSerializer):
 class WeekSerializer(serializers.ModelSerializer):
     materials = MaterialSerializer(many=True, read_only=True)
     quizzes = QuizSerializer(many=True, read_only=True)
-    codes = CodeSerializer(many=True, read_only=True)
+    # codes = CodeSerializer(many=True, read_only=True)
 
     class Meta:
         model = Week

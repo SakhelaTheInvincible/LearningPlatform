@@ -187,16 +187,39 @@ class AdminUserViewSet(mixins.ListModelMixin,
 
 class CourseViewSet(mixins.CreateModelMixin,
                     mixins.ListModelMixin,
+                    mixins.RetrieveModelMixin,
                     viewsets.GenericViewSet):
+    lookup_field = 'title_slug'
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     parser_classes = (JSONParser, MultiPartParser, FormParser)
 
     def get_serializer_class(self):
-        if self.request.method == "POST":
+        if self.action == "create":
             return CourseCreateSerializer
-        else:
+        elif self.action == 'list':
             return CourseListSerializer
+        elif self.action == 'retrieve':
+            return CourseSerializer
+        else:
+            return super().get_serializer_class()
+
+    def get_object(self):
+        """
+        Returns the object the view is displaying.
+
+        You may want to override this if you need to provide non-standard
+        queryset lookups.  Eg if objects are referenced using multiple
+        keyword arguments in the url conf.
+        """
+        queryset = Course.objects.filter(user=self.request.user)
+        title_slug = self.kwargs.get(self.lookup_field)
+        obj = get_object_or_404(queryset, title_slug=title_slug)
+
+        # May raise a permission denied
+        self.check_object_permissions(self.request, obj)
+
+        return obj
 
     def get_queryset(self):
         self.queryset = Course.objects.filter(user=self.request.user)
