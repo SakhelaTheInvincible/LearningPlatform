@@ -9,33 +9,33 @@ import api from "@/src/lib/axios";
 interface WeekInfo {
   week_number: number;
   materials: Material[];
-  quizzes: Quiz[];
-  coding: Coding_Question[];
+  // quizzes: Quiz[];
+  // coding: Coding_Question[];
 }
 interface Material {
   title: string;
   description: string;
   summarized_material: string;
 }
-interface Quiz {
-  id: number;
-  difficulty: "A" | "I" | "S" | "M" | "N";
-  user_score: number;
-  created_at: string;
-  questions: Question[];
-}
-interface Question {
-  id: number;
-  question_text: string;
-  difficulty: string;
-  question_type: "choice" | "multiple_choice" | "true_false" | "open";
-  answer: string;
-  explanation: string;
-}
+// interface Quiz {
+//   id: number;
+//   difficulty: "A" | "I" | "S" | "M" | "N";
+//   user_score: number;
+//   created_at: string;
+//   questions: Question[];
+// }
+// interface Question {
+//   id: number;
+//   question_text: string;
+//   difficulty: string;
+//   question_type: "choice" | "multiple_choice" | "true_false" | "open";
+//   answer: string;
+//   explanation: string;
+// }
 
-interface Coding_Question {
-  title: string;
-}
+// interface Coding_Question {
+//   title: string;
+// }
 
 export default function WeekReading() {
   const [completedReading, setCompletedReading] = useState(false);

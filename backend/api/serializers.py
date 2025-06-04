@@ -97,6 +97,11 @@ class UserSerializer(serializers.ModelSerializer):
 
 # Material Section
 # ====================#
+class MaterialRetrieveSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Material
+        fields = ['title']
+
 class MaterialSerializer(serializers.ModelSerializer):
     class Meta:
         model = Material
@@ -136,13 +141,23 @@ class CodeSerializer(serializers.ModelSerializer):
 # ====================#
 class WeekSerializer(serializers.ModelSerializer):
     materials = MaterialSerializer(many=True, read_only=True)
-    quizzes = QuizSerializer(many=True, read_only=True)
+    # quizzes = QuizSerializer(many=True, read_only=True)
     # codes = CodeSerializer(many=True, read_only=True)
 
     class Meta:
         model = Week
-        fields = ['week_number', 'materials', 'quizzes', 'is_completed']
+        # fields = ['week_number', 'materials', 'quizzes', 'is_completed']
+        fields = ['week_number', 'materials', 'is_completed']
 
+
+class WeekRetrieveSerializer(serializers.ModelSerializer):
+    materials = MaterialRetrieveSerializer(many=True, read_only=True)
+    # quizzes = QuizSerializer(many=True, read_only=True)
+    # codes = CodeSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Week
+        fields = ['week_number', 'materials']
 
 class WeekCreateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -156,6 +171,15 @@ class WeekCreateSerializer(serializers.ModelSerializer):
 # ====================#
 class CourseSerializer(serializers.ModelSerializer):
     weeks = WeekSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Course
+        fields = ['title', 'description', 'image',
+                  'duration_weeks', 'weeks', 'language', 'is_completed']
+
+
+class CourseRetrieveSerializer(serializers.ModelSerializer):
+    weeks = WeekRetrieveSerializer(many=True, read_only=True)
 
     class Meta:
         model = Course

@@ -11,7 +11,7 @@ from rest_framework import generics
 from api.serializers import (OnlyCourseSerializer,
                              CourseSerializer,
                              UserSerializer, UserSignUpSerializer,
-                             PasswordChangeSerializer, UserPublicSerializer, AdminSerializer, CourseCreateSerializer,
+                             PasswordChangeSerializer, UserPublicSerializer, AdminSerializer, CourseCreateSerializer, CourseRetrieveSerializer,
                              CourseListSerializer, WeekCreateSerializer, MaterialCreateSerializer)
 
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
@@ -185,6 +185,7 @@ class AdminUserViewSet(mixins.ListModelMixin,
 # Course section
 # ====================#
 
+
 class CourseViewSet(mixins.CreateModelMixin,
                     mixins.ListModelMixin,
                     mixins.RetrieveModelMixin,
@@ -197,12 +198,10 @@ class CourseViewSet(mixins.CreateModelMixin,
     def get_serializer_class(self):
         if self.action == "create":
             return CourseCreateSerializer
-        elif self.action == 'list':
-            return CourseListSerializer
         elif self.action == 'retrieve':
-            return CourseSerializer
-        else:
-            return super().get_serializer_class()
+            return CourseRetrieveSerializer
+        return CourseListSerializer
+
 
     def get_object(self):
         """
@@ -222,7 +221,8 @@ class CourseViewSet(mixins.CreateModelMixin,
         return obj
 
     def get_queryset(self):
-        self.queryset = Course.objects.filter(user=self.request.user)
+        self.queryset = Course.objects.filter(
+            user=self.request.user).prefetch_related('weeks', 'weeks__materials')
         # self.queryset = Course.objects.all()
         return super().get_queryset()
 
@@ -257,8 +257,19 @@ class CourseViewSet(mixins.CreateModelMixin,
 # Week section
 # ====================#
 
-class WeekViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+class WeekViewSet(mixins.CreateModelMixin,
+                  mixins.RetrieveModelMixin,
+                  viewsets.GenericViewSet):
     serializer_class = WeekCreateSerializer
+
+    def get_serializer_class(self):
+
+        if self.action == 'create':
+            return WeekCreateSerializer
+        elif self.action == 'retrieve':
+            return WeekSerializer
+        else:
+            return super().get_serializer_class()
     # authentication_classes = [JWTAuthentication]
     # permission_classes = [IsAuthenticated]
     parser_classes = (JSONParser, MultiPartParser, FormParser)
@@ -448,32 +459,6 @@ class OnlyCourseCreateAPIView(generics.CreateAPIView):
 class OnlyCourseListAPIView(generics.ListAPIView):
     queryset = Course.objects.all()
     serializer_class = OnlyCourseSerializer
-
-
-class CourseRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Course.objects.prefetch_related("weeks", "weeks__materials")
-    serializer_class = CourseSerializer
-    lookup_field = 'title'
-    lookup_url_kwarg = 'title'
-
-    # def get_object(self):
-    #     """
-    #     Returns the object the view is displaying.
-
-    #     You may want to override this if you need to provide non-standard
-    #     queryset lookups.  Eg if objects are referenced using multiple
-    #     keyword arguments in the url conf.
-    #     """
-    #     queryset = self.filter_queryset(self.get_queryset())
-
-    #     look_up = Q(user=self.request.user) & Q(
-    #         title=self.kwargs.get("title"))
-    #     obj = get_object_or_404(queryset, look_up)
-
-    #     # May raise a permission denied
-    #     self.check_object_permissions(self.request, obj)
-
-    #     return
 
 
 class WeekRetrieveAPIView(APIView):

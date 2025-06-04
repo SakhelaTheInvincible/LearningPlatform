@@ -1,5 +1,5 @@
 from django.urls import path, include
-from .views import (OnlyCourseListAPIView, OnlyCourseCreateAPIView, MaterialQuizCreateAPIView, CourseRetrieveUpdateDestroyAPIView,
+from .views import (OnlyCourseCreateAPIView, MaterialQuizCreateAPIView,
                     WeekRetrieveAPIView, QuizAnswerCheckView, CodeCheckView, MaterialViewSet)
 
 
@@ -34,9 +34,6 @@ router.register(
 urlpatterns = [
     path('', include(router.urls)),
 
-    path('courses/<str:title>/', CourseRetrieveUpdateDestroyAPIView.as_view(),
-         name='courses-create'),
-    
     path('courses/<str:title>/week/<int:selectedWeek>/', WeekRetrieveAPIView.as_view(),
          name='courses-create'),
     
