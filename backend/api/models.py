@@ -235,7 +235,7 @@ class Question(models.Model):
 
     @property
     def __str__(self):
-        return f"{self.get_difficulty_display()} question for Week {self.week.week_number} of {self.week.course.name}"
+        return f"{self.get_difficulty_display()} question for Week {self.week.week_number} of {self.week.course.title}"
 
 
 class Quiz(models.Model):

@@ -109,7 +109,6 @@ def generate_questions_for_week(week: Week) -> dict:
         }
         for q in raw_questions
     ]
-    print(f"question generation of {week.week_number} is done ")
     return questions_data
 
 

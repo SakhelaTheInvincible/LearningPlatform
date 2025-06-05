@@ -253,6 +253,7 @@ class CourseViewSet(mixins.CreateModelMixin,
 
 class WeekViewSet(mixins.CreateModelMixin,
                   mixins.RetrieveModelMixin,
+                  mixins.DestroyModelMixin,
                   viewsets.GenericViewSet):
     queryset = Week.objects.all()
     lookup_field = 'week_number'
