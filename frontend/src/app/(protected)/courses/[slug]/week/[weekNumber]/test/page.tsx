@@ -10,6 +10,24 @@ import api from "@/src/lib/axios";
 import ChoiceQuestion from "@/src/components/ChoiceQuestion";
 import TrueFalseQuestion from "@/src/components/TrueFalseQuestion";
 
+interface WeekInfo {
+  week_number: number;
+  materials: Material[];
+  quizzes: Quiz[];
+  coding: Coding_Question[];
+}
+interface Material {
+  title: string;
+  description: string;
+  summarized_material: string;
+}
+interface Quiz {
+  id: number;
+  difficulty: "B" | "K" | "I" | "A" | "E";
+  user_score: number;
+  created_at: string;
+  questions: Question[];
+}
 interface Question {
   id: number;
   question_text: string;
@@ -19,15 +37,19 @@ interface Question {
   explanation: string;
 }
 
+interface Coding_Question {
+  title: string;
+}
+
 export default function WeekQuestions() {
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [material, setMaterial] = useState<WeekInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const params = useParams();
   const slug = params?.slug as string;
   const weekNumber = parseInt(params?.weekNumber as string);
   const [userAnswers, setUserAnswers] = useState<Record<number, string[]>>({});
   const [score, setScore] = useState<number | null>(null);
-  const [quizDifficulty, setQuizDifficulty] = useState("A");
+  const [quizDifficulty, setQuizDifficulty] = useState("I");
   const [answerResults, setAnswerResults] = useState<
     Record<number, "correct" | "incorrect">
   >({});
@@ -57,15 +79,14 @@ export default function WeekQuestions() {
       [questionId]: answer,
     }));
   };
-
   const handleSubmit = () => {
+    if (!material || !material.quizzes?.[0]) return;
+
+    const questions = material.quizzes[0].questions;
     let correct = 0;
     const results: Record<number, "correct" | "incorrect"> = {};
 
     for (const q of questions) {
-      if (q.question_type == "open") {
-        continue;
-      }
       const userAnswer = userAnswers[q.id] || [];
       const correctAnswer = q.answer;
 
@@ -95,15 +116,13 @@ export default function WeekQuestions() {
     setScore(percentage);
     setAnswerResults(results);
   };
+
   useEffect(() => {
     async function fetchCourse() {
       try {
-        const res = await api.get(
-          `/courses/${slug}/weeks/${weekNumber}/${quizDifficulty}/quiz-questions`
-        );
-        console.log(res.data);
+        const res = await api.get(`/courses/${slug}/week/${weekNumber}`);
         const data = res.data;
-        setQuestions(data);
+        setMaterial(data);
       } catch (error) {
         console.error("Failed to load course:", error);
       } finally {
@@ -115,7 +134,7 @@ export default function WeekQuestions() {
   }, [slug, weekNumber]);
 
   if (loading) return <div className="p-10">Loading course...</div>;
-  if (!questions) return <div className="p-10">Questions not found.</div>;
+  if (!material) return <div className="p-10">Questions not found.</div>;
   return (
     <>
       <div className="flex flex-col">
@@ -154,7 +173,7 @@ export default function WeekQuestions() {
                   Quiz: Introduction to Computer Science
                 </h2>
 
-                {questions.map((q) => {
+                {material.quizzes?.[0]?.questions.map((q) => {
                   const difficultyMap: Record<
                     string,
                     | "Beginner"
