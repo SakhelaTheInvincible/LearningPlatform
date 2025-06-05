@@ -13,7 +13,7 @@ from api.serializers import (CourseSerializer,
                              UserSerializer, UserSignUpSerializer,
                              PasswordChangeSerializer, UserPublicSerializer, AdminSerializer, CourseCreateSerializer, CourseRetrieveSerializer,
                              CourseListSerializer, WeekCreateSerializer, MaterialCreateSerializer,
-                             QuestionCreateSerializer, QuizCreateSerializer)
+                             QuestionCreateSerializer, QuizCreateSerializer, CodeSerializer, CodeCreateSerializer)
 
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
@@ -498,6 +498,53 @@ class QuizViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, viewsets.G
 # ====================#
 
 
+# Code section
+# ====================#
+class CodeViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    serializer_class = CodeSerializer
+
+    def get_queryset(self):
+        title_slug = self.kwargs['title_slug']
+        week_number = self.kwargs['week_number']
+        difficulty = self.kwargs.get('difficulty', "E")  # Default to Easy
+        course = get_object_or_404(Course.objects.all(), title_slug=title_slug)
+        week = get_object_or_404(Week.objects.all(), course=course, week_number=week_number)
+        return Code.objects.filter(week=week, difficulty=difficulty)
+
+    def create(self, request, *args, **kwargs):
+        user = request.user
+        queryset = Course.objects.all()
+        title_slug = self.kwargs['title_slug']
+        week_number = self.kwargs['week_number']
+        course = get_object_or_404(queryset, title_slug=title_slug)
+
+        if course.user != user:
+            return Response({'detail': 'Not allowed'}, status=status.HTTP_403_FORBIDDEN)
+
+        # get the correct week
+        queryset = Week.objects.all()
+        week = get_object_or_404(queryset, course=course, week_number=week_number)
+        
+        # Generate all coding problems for the week
+        try:
+            result = generate_coding_problems_for_week(week=week)
+            return Response({
+                'detail': 'Coding problems generated successfully',
+                'generation_stats': result
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+# ====================#
+
+
 class MaterialQuizCreateAPIView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
@@ -700,12 +747,12 @@ class CodeCheckView(APIView):
         user_score = comparison['user_score']
         error = comparison['error']
 
-        # Update code score if it's higher than previous
-        if user_score > code.user_score:
-            code.user_score = user_score
-            code.save(update_fields=['user_score'])
+        code.user_score = user_score
+        code.template_code = solution
+        code.save(update_fields=['user_score', 'template_code'])
 
         return Response({
             "user_score": user_score,
             "error": error
         })
+

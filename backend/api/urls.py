@@ -10,7 +10,8 @@ from api.views import (
     CourseViewSet,
     WeekViewSet,
     QuestionViewSet,
-    QuizViewSet
+    QuizViewSet,
+    CodeViewSet
 )
 from rest_framework.routers import DefaultRouter
 
@@ -34,6 +35,8 @@ router.register(
     r'courses/(?P<title_slug>[\w-]+)/weeks/(?P<week_number>\d+)/questions', QuestionViewSet, basename='course-weeks-question')
 router.register(
     r'courses/(?P<title_slug>[\w-]+)/weeks/(?P<week_number>\d+)/(?P<difficulty>[\w-]+)/quizzes', QuizViewSet, basename='course-weeks-quiz')
+router.register(
+    r'courses/(?P<title_slug>[\w-]+)/weeks/(?P<week_number>\d+)/(?P<difficulty>[\w-]+)/codes', CodeViewSet, basename='course-weeks-code')
 
 # add pagination to admin panel
 urlpatterns = [

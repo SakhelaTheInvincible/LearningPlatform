@@ -164,10 +164,25 @@ class QuizSerializer(serializers.ModelSerializer):
 
 
 # ====================#
+class CodeCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Code
+        fields = [
+            'week',
+            'difficulty',
+            'problem_statement',
+            'solution',
+            'template_code'
+        ]
+
+    def create(self, validated_data):
+        return Code.objects.create(**validated_data)
+
+
 class CodeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Code
-        fields = '__all__'
+        fields = ['id', 'difficulty', 'user_score', 'created_at', 'problem_statement', 'template_code']
 
 
 # Week Section
