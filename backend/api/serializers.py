@@ -115,7 +115,8 @@ class MaterialCreateSerializer(serializers.ModelSerializer):
 
 # ====================#
 
-
+# Questions Section
+# ====================#
 class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
@@ -123,6 +124,32 @@ class QuestionSerializer(serializers.ModelSerializer):
                   'question_type', 'answer', 'explanation']
 
 
+class QuestionCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Question
+        fields = [
+            'week',
+            'difficulty',
+            'question_type',
+            'question_text',
+            'answer',
+            'explanation',
+        ]
+
+# ====================#
+
+# Quiz Section
+# ====================#
+
+
+class QuizCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Quiz
+        fields = [
+            'week',
+            'difficulty',
+            'questions',  # This should be a list of question IDs
+        ]
 class QuizSerializer(serializers.ModelSerializer):
     questions = QuestionSerializer(many=True, read_only=True)
 
@@ -131,6 +158,7 @@ class QuizSerializer(serializers.ModelSerializer):
         fields = ['id', 'difficulty', 'user_score', 'created_at', 'questions']
 
 
+# ====================#
 class CodeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Code
@@ -212,14 +240,14 @@ class CourseListSerializer(serializers.ModelSerializer):
                   'image', 'is_completed']
 
 
-class OnlyCourseSerializer(serializers.ModelSerializer):
-    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    title_slug = serializers.SlugField(read_only=True)
+# class OnlyCourseSerializer(serializers.ModelSerializer):
+#     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+#     title_slug = serializers.SlugField(read_only=True)
 
-    class Meta:
-        model = Course
-        fields = ['id', 'title', 'title_slug', 'duration_weeks', 'description', 'user',
-                  'image', 'language', 'is_completed']
+#     class Meta:
+#         model = Course
+#         fields = ['id', 'title', 'title_slug', 'duration_weeks', 'description', 'user',
+#                   'image', 'language', 'is_completed']
 
 # ====================#
 

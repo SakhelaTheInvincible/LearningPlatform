@@ -79,9 +79,14 @@ export default function UploadCourseDialog({
         `/courses/${slug}/weeks/${selectedWeek}/materials/`,
         formData,
         {
-          headers: { "Content-Type": "multipart/form-data" },
+          headers: { "Content-Type": "multipart/form-data" }
         }
       );
+
+      await api.post(
+        `/courses/${slug}/weeks/${selectedWeek}/questions/`,
+      );
+
       setMaterialDialogOpen(false);
       setMaterial(null);
       setMaterialTitle("");

@@ -7,6 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { StarIcon, HandThumbUpIcon } from "@heroicons/react/24/solid";
 import api from "@/src/lib/axios";
+import { useRouter } from "next/navigation";
 
 interface CourseInfo {
   title: string;
@@ -25,7 +26,7 @@ export default function CoursePage({ slug }: { slug: string }) {
   const [activeTab, setActiveTab] = useState<"about" | "modules">("about");
   const [course, setCourse] = useState<CourseInfo | null>(null);
   const [loading, setLoading] = useState(true);
-
+  const router = useRouter()
   useEffect(() => {
     async function fetchCourse() {
       try {
@@ -89,12 +90,27 @@ export default function CoursePage({ slug }: { slug: string }) {
           <h1 className=" text-4xl font-bold mb-4 drop-shadow-lg mt-[150px]">
             {course.title}
           </h1>
-          <div className="flex flex-row justify-start mb-[50px]">
+          <div className="flex flex-row justify-start mb-[50px] space-x-4">
             <Link href={`${course.slug}/week/1`}>
               <button className="bg-indigo-600 text-white px-6 py-3 rounded-md font-semibold hover:bg-indigo-700 transition">
                 Go to Course
               </button>
             </Link>
+            <button
+              className="bg-red-600 text-white px-6 py-3 rounded-md font-semibold hover:bg-red-700 transition"
+              onClick={async () => {
+                if (!window.confirm("Are you sure you want to delete this course? This action cannot be undone.")) return;
+                try {
+                  await api.delete(`/courses/${course.slug}/`);
+                  // window.location.href = "courses";
+                  router.push('/courses')
+                } catch (err) {
+                  console.error("Failed to delete course:", err);
+                }
+              }}
+            >
+              Delete
+            </button>
           </div>
         </div>
       </div>

@@ -43,7 +43,11 @@ def generate_material_summary(material: str) -> str:
     
     return "\n\n".join(full_summary)
     
+# def generate_questions_for_week(week: Week) -> dict:
+
+
 def generate_questions_for_week(week: Week) -> dict:
+
     try:
         material = week.materials.first()
         if not material or not material.summarized_material:
@@ -94,37 +98,20 @@ def generate_questions_for_week(week: Week) -> dict:
                         "difficulty": DIFFICULTY_MAPPING[difficulty]
                     })
 
-    # Cleanup existing questions
-    Question.objects.filter(week=week).delete()
-
-    # Create new questions
-    questions_to_create = [
-        Question(
-            week=week,
-            difficulty=DIFFICULTY_MAPPING[q['difficulty']],
-            question_type=q.get('type', ''),
-            question_text=q['question'],
-            answer=q['answer'],
-            explanation=q['explanation'],
-        ) for q in raw_questions
+    questions_data = [
+        {
+            "week": week.id,
+            "difficulty": DIFFICULTY_MAPPING[q['difficulty']],
+            "question_type": q.get('type', ''),
+            "question_text": q['question'],
+            "answer": q['answer'],
+            "explanation": q['explanation'],
+        }
+        for q in raw_questions
     ]
+    print(f"question generation of {week.week_number} is done ")
+    return questions_data
 
-    created_questions = Question.objects.bulk_create(questions_to_create)
-
-    # Final distribution report
-    difficulty_counts = {d: 0 for d in DIFFICULTIES}
-    for q in raw_questions:
-        difficulty_counts[q['difficulty']] += 1
-
-    return {
-        "week_id": week.id,
-        "course": week.course.title,
-        "total_questions": len(created_questions),
-        "chunks_processed": len(chunks),
-        "questions_per_chunk": questions_per_level,
-        "difficulty_distribution": difficulty_counts,
-        "average_questions_per_level": len(created_questions) // len(DIFFICULTIES)
-    }
 
 def compare_answers(question_type: str, correct_answer: str, user_answer: str) -> dict:
     if question_type not in ['open', 'coding']:

@@ -8,11 +8,11 @@ from file_manager.file_manager import extract_text
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from rest_framework import generics
-from api.serializers import (OnlyCourseSerializer,
-                             CourseSerializer,
+from api.serializers import (CourseSerializer,
                              UserSerializer, UserSignUpSerializer,
                              PasswordChangeSerializer, UserPublicSerializer, AdminSerializer, CourseCreateSerializer, CourseRetrieveSerializer,
-                             CourseListSerializer, WeekCreateSerializer, MaterialCreateSerializer)
+                             CourseListSerializer, WeekCreateSerializer, MaterialCreateSerializer,
+                             QuestionCreateSerializer)
 
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
@@ -189,6 +189,7 @@ class AdminUserViewSet(mixins.ListModelMixin,
 class CourseViewSet(mixins.CreateModelMixin,
                     mixins.ListModelMixin,
                     mixins.RetrieveModelMixin,
+                    mixins.DestroyModelMixin,
                     viewsets.GenericViewSet):
     lookup_field = 'title_slug'
     authentication_classes = [JWTAuthentication]
@@ -202,15 +203,8 @@ class CourseViewSet(mixins.CreateModelMixin,
             return CourseRetrieveSerializer
         return CourseListSerializer
 
-
     def get_object(self):
-        """
-        Returns the object the view is displaying.
 
-        You may want to override this if you need to provide non-standard
-        queryset lookups.  Eg if objects are referenced using multiple
-        keyword arguments in the url conf.
-        """
         queryset = Course.objects.filter(user=self.request.user)
         title_slug = self.kwargs.get(self.lookup_field)
         obj = get_object_or_404(queryset, title_slug=title_slug)
@@ -302,7 +296,6 @@ class WeekViewSet(mixins.CreateModelMixin,
         self.check_object_permissions(self.request, obj)
         return obj
 
-
 # ====================#
 
 
@@ -353,9 +346,44 @@ class MaterialViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
-
 # ====================#
 
+# Question section
+# ====================#
+
+
+class QuestionViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return QuestionCreateSerializer
+        return super().get_serializer_class()
+
+    def create(self, request, *args, **kwargs):
+        user = request.user
+        queryset = Course.objects.all()
+        title_slug = self.kwargs['title_slug']
+        week_number = self.kwargs['week_number']
+        course = get_object_or_404(queryset, title_slug=title_slug)
+
+        if course.user != user:
+            return Response({'detail': 'Not allowed to add weeks to this course.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # get the correct week
+        queryset = Week.objects.all()
+        week = get_object_or_404(
+            queryset, course=course, week_number=week_number)
+        # generate questions
+        question_data = generate_questions_for_week(week=week)
+        serializer = self.get_serializer(many=True, data=question_data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+# ====================#
 
 class MaterialQuizCreateAPIView(APIView):
     parser_classes = (MultiPartParser, FormParser)
@@ -444,34 +472,6 @@ class MaterialQuizCreateAPIView(APIView):
         if not created_quizzes and errors:
             return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
         return Response(response_data, status=status.HTTP_201_CREATED)
-
-
-class OnlyCourseCreateAPIView(generics.CreateAPIView):
-    serializer_class = OnlyCourseSerializer
-    parser_classes = (MultiPartParser, FormParser)
-    # authentication_classes = [JWTAuthentication]
-    # permission_classes = [IsAuthenticated]
-
-    def create(self, request, *args, **kwargs):
-        print(request.data)
-        print(self.request.user)
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-
-    def perform_create(self, serializer):
-        title = serializer.validated_data['title']
-
-        # create course, but also check if created course is about some programming language
-        serializer.save(user=self.request.user, language=check_language(title))
-
-
-class OnlyCourseListAPIView(generics.ListAPIView):
-    queryset = Course.objects.all()
-    serializer_class = OnlyCourseSerializer
-
 
 class WeekRetrieveAPIView(APIView):
     def get(self, request, title, selectedWeek):

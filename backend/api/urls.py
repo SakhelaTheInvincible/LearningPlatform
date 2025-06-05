@@ -1,6 +1,5 @@
 from django.urls import path, include
-from .views import (OnlyCourseCreateAPIView, MaterialQuizCreateAPIView,
-                    WeekRetrieveAPIView, QuizAnswerCheckView, CodeCheckView, MaterialViewSet)
+from .views import (QuizAnswerCheckView, CodeCheckView, MaterialViewSet)
 
 
 from api.views import (
@@ -9,7 +8,8 @@ from api.views import (
     UserPublicViewSet,
     AdminUserViewSet,
     CourseViewSet,
-    WeekViewSet
+    WeekViewSet,
+    QuestionViewSet
 )
 from rest_framework.routers import DefaultRouter
 
@@ -29,13 +29,15 @@ router.register(
     r'courses/(?P<title_slug>[\w-]+)/weeks', WeekViewSet, basename='course-weeks')
 router.register(
     r'courses/(?P<title_slug>[\w-]+)/weeks/(?P<week_number>\d+)/materials', MaterialViewSet, basename='course-weeks-material')
+router.register(
+    r'courses/(?P<title_slug>[\w-]+)/weeks/(?P<week_number>\d+)/questions', QuestionViewSet, basename='course-weeks-question')
 
 # add pagination to admin panel
 urlpatterns = [
     path('', include(router.urls)),
 
-    path('courses/<str:title>/week/<int:selectedWeek>/', WeekRetrieveAPIView.as_view(),
-         name='courses-create'),
+    # path('courses/<str:title>/week/<int:selectedWeek>/', WeekRetrieveAPIView.as_view(),
+    #      name='courses-create'),
     
     path('courses/<str:title>/week/<int:selectedWeek>/quiz/check/', QuizAnswerCheckView.as_view(),
          name='quiz-check'),
@@ -44,10 +46,10 @@ urlpatterns = [
          name='code-check'),
 
     #     path('courses/', OnlyCourseListAPIView.as_view(), name='courses-list'),
-    path('course/upload/', OnlyCourseCreateAPIView.as_view(), name='courses-create'),
+    # path('course/upload/', OnlyCourseCreateAPIView.as_view(), name='courses-create'),
 
-    path('course/upload/<str:courseTitle>/week/<int:selectedWeek>/',
-         MaterialQuizCreateAPIView.as_view(), name='material-upload'),
+    # path('course/upload/<str:courseTitle>/week/<int:selectedWeek>/',
+    #      MaterialQuizCreateAPIView.as_view(), name='material-upload'),
 
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
