@@ -102,6 +102,7 @@ class MaterialRetrieveSerializer(serializers.ModelSerializer):
         model = Material
         fields = ['title']
 
+
 class MaterialSerializer(serializers.ModelSerializer):
     class Meta:
         model = Material
@@ -117,6 +118,8 @@ class MaterialCreateSerializer(serializers.ModelSerializer):
 
 # Questions Section
 # ====================#
+
+
 class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
@@ -143,13 +146,27 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
 
 
 class QuizCreateSerializer(serializers.ModelSerializer):
+    questions = serializers.PrimaryKeyRelatedField(
+        queryset=Question.objects.all(),
+        many=True,
+        required=False
+    )
+
     class Meta:
         model = Quiz
         fields = [
             'week',
             'difficulty',
-            'questions',  # This should be a list of question IDs
+            'questions',
         ]
+
+    def create(self, validated_data):
+        questions = validated_data.pop('questions', [])
+        quiz = Quiz.objects.create(**validated_data)
+        quiz.questions.set(questions)
+        return quiz
+
+
 class QuizSerializer(serializers.ModelSerializer):
     questions = QuestionSerializer(many=True, read_only=True)
 
@@ -186,6 +203,7 @@ class WeekRetrieveSerializer(serializers.ModelSerializer):
     class Meta:
         model = Week
         fields = ['week_number', 'materials']
+
 
 class WeekCreateSerializer(serializers.ModelSerializer):
     class Meta:

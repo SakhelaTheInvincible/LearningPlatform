@@ -1,6 +1,7 @@
 from rest_framework.decorators import api_view, APIView, action
 from rest_framework.response import Response
 from rest_framework import status
+import random
 from ai.services import generate_material_summary, generate_questions_for_week, compare_answers, check_language, generate_coding_problems_for_week
 from api.models import Course, Week, Question, Material, User, Quiz, Code
 from api.serializers import CourseSerializer, QuestionSerializer, QuizSerializer, WeekSerializer
@@ -12,7 +13,7 @@ from api.serializers import (CourseSerializer,
                              UserSerializer, UserSignUpSerializer,
                              PasswordChangeSerializer, UserPublicSerializer, AdminSerializer, CourseCreateSerializer, CourseRetrieveSerializer,
                              CourseListSerializer, WeekCreateSerializer, MaterialCreateSerializer,
-                             QuestionCreateSerializer)
+                             QuestionCreateSerializer, QuizCreateSerializer)
 
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
@@ -386,6 +387,98 @@ class QuestionViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 # ====================#
 
+
+# Quiz section
+# ====================#
+class QuizViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return QuizCreateSerializer
+        return super().get_serializer_class()
+
+    def create(self, request, *args, **kwargs):
+        user = request.user
+        queryset = Course.objects.all()
+        title_slug = self.kwargs['title_slug']
+        week_number = self.kwargs['week_number']
+        difficulty = self.kwargs.get('difficulty', "S")
+        course = get_object_or_404(queryset, title_slug=title_slug)
+
+        if course.user != user:
+            return Response({'detail': 'Not allowed'}, status=status.HTTP_403_FORBIDDEN)
+
+        # get the correct week
+        queryset = Week.objects.all()
+        week = get_object_or_404(
+            queryset, course=course, week_number=week_number)
+        # generate questions
+        # question_data = generate_questions_for_week(week=week)
+        questions = self.select_questions(week=week, difficulty=difficulty)
+        data = {'week': week,
+                'difficulty': difficulty,
+                'questions': questions
+                }
+        serializer = self.get_serializer(data=data)
+
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def select_questions(self, difficulty):
+        week_questions = self.week.questions.exclude(question_type='coding')
+        total_questions = week_questions.count()
+
+        # Determine how many questions to select (min 10 or 1/3 of total)
+        num_questions = max(10, total_questions // 3)
+
+        # Get difficulty distribution based on quiz difficulty
+        distribution = self.get_difficulty_distribution(difficulty)
+
+        selected_questions = []
+
+        for diff_code, percentage in distribution.items():
+            count = max(1, round(num_questions * percentage / 100))
+            questions = list(week_questions.filter(difficulty=diff_code))
+
+            # If not enough questions of this difficulty, take what's available
+            count = min(count, len(questions))
+
+            if count > 0:
+                selected = random.sample(questions, count)
+                selected_questions.extend(selected)
+
+        # If we didn't get enough questions, fill with random ones
+        if len(selected_questions) < num_questions:
+            remaining = num_questions - len(selected_questions)
+            remaining_questions = list(
+                set(week_questions) - set(selected_questions))
+            if remaining_questions:
+                selected_questions.extend(
+                    random.sample(remaining_questions, min(
+                        remaining, len(remaining_questions)))
+                )
+
+        return selected_questions
+
+    def get_difficulty_distribution(self, difficulty):
+        distributions = {
+            'N': {'B': 40, 'K': 30, 'I': 15, 'A': 10, 'E': 5},    # Normal
+            'M': {'B': 10, 'K': 40, 'I': 30, 'A': 10, 'E': 5},    # Medium
+            'S': {'B': 10, 'K': 35, 'I': 30, 'A': 15, 'E': 10},    # Standard
+            'I': {'B': 5, 'K': 25, 'I': 30, 'A': 25, 'E': 15},     # Intermediate
+            'A': {'B': 5, 'K': 15, 'I': 30, 'A': 30, 'E': 20},     # Advanced
+        }
+        # Default to Standard
+        return distributions.get(difficulty, distributions['S'])
+
+
+# ====================#
+
+
 class MaterialQuizCreateAPIView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
@@ -473,6 +566,7 @@ class MaterialQuizCreateAPIView(APIView):
         if not created_quizzes and errors:
             return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
         return Response(response_data, status=status.HTTP_201_CREATED)
+
 
 class WeekRetrieveAPIView(APIView):
     def get(self, request, title, selectedWeek):
