@@ -146,33 +146,21 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
 
 
 class QuizCreateSerializer(serializers.ModelSerializer):
-    questions = serializers.PrimaryKeyRelatedField(
-        queryset=Question.objects.all(),
-        many=True,
-        required=False
-    )
-
     class Meta:
         model = Quiz
         fields = [
             'week',
             'difficulty',
-            'questions',
         ]
 
     def create(self, validated_data):
-        questions = validated_data.pop('questions', [])
-        quiz = Quiz.objects.create(**validated_data)
-        quiz.questions.set(questions)
-        return quiz
+        return Quiz.objects.create(**validated_data)
 
 
 class QuizSerializer(serializers.ModelSerializer):
-    questions = QuestionSerializer(many=True, read_only=True)
-
     class Meta:
         model = Quiz
-        fields = ['id', 'difficulty', 'user_score', 'created_at', 'questions']
+        fields = ['id', 'difficulty', 'user_score', 'created_at']
 
 
 # ====================#

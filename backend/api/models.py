@@ -7,6 +7,8 @@ from django.utils.text import slugify
 class User(AbstractUser):
     profile_picture = models.ImageField(
         upload_to='profile_pics/', blank=True, null=True)
+    
+    user_exp = models.PositiveSmallIntegerField(default=0)
 
     def delete(self, *args, **kwargs):
         if self.profile_picture:
@@ -50,6 +52,14 @@ class Course(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     is_completed = models.BooleanField(default=False)
     language = models.TextField(default="None")
+    
+    DIFFICULTY_CHOICES = [
+        ('E', 'Easy'),
+        ('M', 'Medium'),
+        ('H', 'Hard'),
+    ]
+    
+    difficulty = models.CharField(max_length=1, choices=DIFFICULTY_CHOICES)
 
     def delete(self, *args, **kwargs):
         if self.image:
@@ -260,7 +270,7 @@ class Quiz(models.Model):
         default=0,
         validators=[MinValueValidator(0), MaxValueValidator(100)]
     )
-    questions = models.ManyToManyField(Question, related_name='quizzes')
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
