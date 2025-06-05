@@ -34,9 +34,11 @@ router.register(
 router.register(
     r'courses/(?P<title_slug>[\w-]+)/weeks/(?P<week_number>\d+)/questions', QuestionViewSet, basename='course-weeks-question')
 router.register(
-    r'courses/(?P<title_slug>[\w-]+)/weeks/(?P<week_number>\d+)/(?P<difficulty>[\w-]+)/quizzes', QuizViewSet, basename='course-weeks-quiz')
+    r'courses/(?P<title_slug>[\w-]+)/weeks/(?P<week_number>\d+)/quizzes', QuizViewSet, basename='course-weeks-quiz')
 router.register(
-    r'courses/(?P<title_slug>[\w-]+)/weeks/(?P<week_number>\d+)/(?P<difficulty>[\w-]+)/codes', CodeViewSet, basename='course-weeks-code')
+    r'courses/(?P<title_slug>[\w-]+)/weeks/(?P<week_number>\d+)/(?P<difficulty>[\w-]+)/quiz-questions', QuizViewSet, basename='course-weeks-quiz-questions')
+router.register(
+    r'courses/(?P<title_slug>[\w-]+)/weeks/(?P<week_number>\d+)/codes', CodeViewSet, basename='course-weeks-code')
 
 # add pagination to admin panel
 urlpatterns = [

@@ -390,7 +390,7 @@ class QuestionViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
 # Quiz section
 # ====================#
-class QuizViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+class QuizViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = QuizSerializer
@@ -400,30 +400,65 @@ class QuizViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, viewsets.G
         week_number = self.kwargs['week_number']
         course = get_object_or_404(Course.objects.all(), title_slug=title_slug)
         week = get_object_or_404(Week.objects.all(), course=course, week_number=week_number)
+        
+        # If we're in the quiz-questions endpoint, we don't need a queryset
+        if 'difficulty' in self.kwargs:
+            return Quiz.objects.none()
+            
         return Quiz.objects.filter(week=week)
 
-    def retrieve(self, request, *args, **kwargs):
-        quiz = self.get_object()
-        difficulty = quiz.difficulty
-        week = quiz.week
+    def list(self, request, *args, **kwargs):
+        # If we have difficulty in kwargs, return questions instead of quizzes
+        if 'difficulty' in self.kwargs:
+            difficulty = self.kwargs['difficulty'].upper()  # Convert to uppercase
+            valid_difficulties = ['N', 'M', 'S', 'I', 'A']
+            
+            if difficulty not in valid_difficulties:
+                return Response(
+                    {'detail': f'Invalid difficulty. Must be one of: {", ".join(valid_difficulties)}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            week = get_object_or_404(Week.objects.all(), 
+                                   course__title_slug=self.kwargs['title_slug'],
+                                   week_number=self.kwargs['week_number'])
+            
+            # Get questions for this difficulty
+            questions = self.select_questions(week, difficulty)
+            question_serializer = QuestionSerializer(questions, many=True)
+            return Response(question_serializer.data)
+            
+        # Otherwise return quizzes as normal
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def create(self, request, *args, **kwargs):
+        user = request.user
+        queryset = Course.objects.all()
+        title_slug = self.kwargs['title_slug']
+        week_number = self.kwargs['week_number']
+        difficulty = self.kwargs.get('difficulty', "S")
+        course = get_object_or_404(queryset, title_slug=title_slug)
+
+        if course.user != user:
+            return Response({'detail': 'Not allowed'}, status=status.HTTP_403_FORBIDDEN)
+
+        # get the correct week
+        queryset = Week.objects.all()
+        week = get_object_or_404(queryset, course=course, week_number=week_number)
         
-        # Get questions for this quiz
-        questions = self.select_questions(week, difficulty)
-        
-        # Serialize the questions
-        question_serializer = QuestionSerializer(questions, many=True)
-        
-        # Get the quiz data
-        quiz_serializer = self.get_serializer(quiz)
-        
-        # Combine the data
-        response_data = {
-            **quiz_serializer.data,
-            'questions': question_serializer.data
+        data = {
+            'week': week,
+            'difficulty': difficulty,
         }
         
-        return Response(response_data)
-
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+    
     def select_questions(self, week, difficulty):
         week_questions = week.questions
         total_questions = week_questions.count()
@@ -458,6 +493,7 @@ class QuizViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, viewsets.G
 
         return selected_questions
 
+
     def get_difficulty_distribution(self, difficulty):
         distributions = {
             'N': {'B': 40, 'K': 30, 'I': 15, 'A': 10, 'E': 5},    # Normal
@@ -469,31 +505,6 @@ class QuizViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, viewsets.G
         # Default to Standard
         return distributions.get(difficulty, distributions['S'])
 
-    def create(self, request, *args, **kwargs):
-        user = request.user
-        queryset = Course.objects.all()
-        title_slug = self.kwargs['title_slug']
-        week_number = self.kwargs['week_number']
-        difficulty = self.kwargs.get('difficulty', "S")
-        course = get_object_or_404(queryset, title_slug=title_slug)
-
-        if course.user != user:
-            return Response({'detail': 'Not allowed'}, status=status.HTTP_403_FORBIDDEN)
-
-        # get the correct week
-        queryset = Week.objects.all()
-        week = get_object_or_404(queryset, course=course, week_number=week_number)
-        
-        data = {
-            'week': week,
-            'difficulty': difficulty,
-        }
-        
-        serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 # ====================#
 
@@ -508,10 +519,9 @@ class CodeViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.Gener
     def get_queryset(self):
         title_slug = self.kwargs['title_slug']
         week_number = self.kwargs['week_number']
-        difficulty = self.kwargs.get('difficulty', "E")  # Default to Easy
         course = get_object_or_404(Course.objects.all(), title_slug=title_slug)
         week = get_object_or_404(Week.objects.all(), course=course, week_number=week_number)
-        return Code.objects.filter(week=week, difficulty=difficulty)
+        return Code.objects.filter(week=week)  # Return all codes for the week
 
     def create(self, request, *args, **kwargs):
         user = request.user
