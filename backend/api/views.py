@@ -394,27 +394,50 @@ class QuestionViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 class QuizViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
+    lookup_field = 'difficulty'
 
     def get_serializer_class(self):
         if self.action == 'create_quizzes':
             return QuizCreateSerializer
         elif self.action == 'list':
             return QuizListSerializer
-        return super().get_serializer_class()
+        elif self.action == 'retrieve':
+            return QuizSerializer
+        else:
+            return super().get_serializer_class()
+
+    def get_object(self):
+        queryset = Course.objects.all()
+        title_slug = self.kwargs['title_slug']
+        week_number = self.kwargs['week_number']
+
+        difficulty = self.kwargs[self.lookup_field]
+
+        course = get_object_or_404(
+            Course, title_slug=title_slug, user=self.request.user)
+
+        queryset = Week.objects.all()
+        week = get_object_or_404(queryset, course=course,
+                                 week_number=week_number)
+        queryset = Quiz.objects.all()
+
+        obj = get_object_or_404(queryset, week=week,
+                                difficulty=difficulty)
+        self.check_object_permissions(self.request, obj)
+        return obj
 
     def get_queryset(self):
         title_slug = self.kwargs['title_slug']
         week_number = self.kwargs['week_number']
-        difficulty = self.request.query_params.get('difficulty', None)
-        
         queryset = Course.objects.all()
-        course = get_object_or_404(queryset, title_slug=title_slug)
+        course = get_object_or_404(
+            queryset, title_slug=title_slug, user=self.request.user)
+        queryset = Week.objects.all()
+
         week = get_object_or_404(
-            Week.objects.all(), course=course, week_number=week_number)
+            queryset, course=course, week_number=week_number)
 
         quizzes = Quiz.objects.filter(week=week)
-        if difficulty:
-            quizzes = quizzes.filter(difficulty=difficulty)
 
         return quizzes
 

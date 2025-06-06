@@ -99,10 +99,10 @@ export default function WeekQuestions() {
     async function fetchCourse() {
       try {
         const res = await api.get(
-          `/courses/${slug}/weeks/${weekNumber}/${quizDifficulty}/quiz-questions`
+          `/courses/${slug}/weeks/${weekNumber}/quizzes/${quizDifficulty}`
         );
-        console.log(res.data);
-        const data = res.data;
+        console.log(res.data.questions);
+        const data = res.data.questions;
         setQuestions(data);
       } catch (error) {
         console.error("Failed to load course:", error);
