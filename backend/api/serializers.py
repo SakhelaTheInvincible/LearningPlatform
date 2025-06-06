@@ -148,19 +148,40 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
 class QuizCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Quiz
-        fields = [
-            'week',
-            'difficulty',
-        ]
+        fields = ['week', 'difficulty', 'passing_requirement']
 
-    def create(self, validated_data):
-        return Quiz.objects.create(**validated_data)
+
+class QuizListSerializer(serializers.ModelSerializer):
+    difficulty_display = serializers.SerializerMethodField()
+    passing_requirement_display = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Quiz
+        fields = ['id', 'difficulty', 'difficulty_display',
+                  'passing_requirement_display', 'user_score']
+
+    def get_difficulty_display(self, obj):
+        return obj.get_difficulty_display()
+
+    def get_passing_requirement_display(self, obj):
+        return obj.get_passing_requirement_display()
 
 
 class QuizSerializer(serializers.ModelSerializer):
+    questions = QuestionSerializer(many=True, read_only=True)
+    difficulty_display = serializers.SerializerMethodField()
+    passing_requirement_display = serializers.SerializerMethodField()
+
     class Meta:
         model = Quiz
-        fields = ['id', 'difficulty', 'user_score', 'created_at']
+        fields = ['id', 'difficulty', 'difficulty_display', 'passing_requirement',
+                  'passing_requirement_display', 'user_score', 'questions']
+
+    def get_difficulty_display(self, obj):
+        return obj.get_difficulty_display()
+
+    def get_passing_requirement_display(self, obj):
+        return obj.get_passing_requirement_display()
 
 
 # ====================#
@@ -244,12 +265,6 @@ class CourseCreateSerializer(serializers.ModelSerializer):
         model = Course
         fields = ['title', 'title_slug', 'duration_weeks',
                   'description', 'user', 'image']
-
-    # def create(self, validated_data):
-    #     title = validated_data.get('title', "")
-    #     # add id to title for slugify
-    #     validated_data['title_slug'] = slugify(title)
-    #     return super().create(validated_data)
 
 
 class CourseListSerializer(serializers.ModelSerializer):

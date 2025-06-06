@@ -256,11 +256,25 @@ class Quiz(models.Model):
         ('A', 'Advanced'),
     ]
 
+    PASSING_THRESHOLD = [
+        ('N', 50),
+        ('M', 60),
+        ('S', 70),
+        ('I', 80),
+        ('A', 85),
+    ]
+
     week = models.ForeignKey(
         Week,
         on_delete=models.CASCADE,
         related_name='quizzes'
     )
+    passing_requirement = models.CharField(
+        max_length=1,
+        choices=PASSING_THRESHOLD,
+        default='S'
+    )
+
     difficulty = models.CharField(
         max_length=1,
         choices=DIFFICULTY_LEVEL_CHOICES,
@@ -269,6 +283,10 @@ class Quiz(models.Model):
     user_score = models.PositiveSmallIntegerField(
         default=0,
         validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+    questions = models.ManyToManyField(
+        Question,
+        related_name='quizzes'
     )
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -279,7 +297,7 @@ class Quiz(models.Model):
         ordering = ['week', '-created_at']
 
     def __str__(self):
-        return f"Quiz for Week {self.week.week_number} ({self.get_difficulty_display()})"
+        return f"Quiz for Week {self.week.week_number} ({self.get_difficulty_display()}) for {self.week.course}"
 
 
 class Code(models.Model):

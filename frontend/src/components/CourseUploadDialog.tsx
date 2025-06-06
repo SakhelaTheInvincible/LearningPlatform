@@ -86,6 +86,9 @@ export default function UploadCourseDialog({
       await api.post(
         `/courses/${slug}/weeks/${selectedWeek}/questions/`,
       );
+      await api.post(
+        `/courses/${slug}/weeks/${selectedWeek}/quizzes/create_quizzes/`,
+      );
 
       setMaterialDialogOpen(false);
       setMaterial(null);
