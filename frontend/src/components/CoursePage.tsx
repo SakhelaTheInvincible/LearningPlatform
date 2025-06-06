@@ -192,10 +192,11 @@ export default function CoursePage({ slug }: { slug: string }) {
             Modules
           </button>
         </div>
-
+      </div>
+      <div className="w-[calc(100%-260px)] mx-auto mb-6 z-10 relative border rounded-lg border-gray-200">
         {/* About / Modules Content */}
         {activeTab === "about" ? (
-          <div className="bg-white p-6 min-w-[350px] max-w-[700px] rounded-lg shadow ">
+          <div className="bg-white p-6 rounded-lg shadow ">
             <h2 className="text-2xl font-bold mb-4 text-indigo-700">
               About this Course
             </h2>
@@ -204,7 +205,7 @@ export default function CoursePage({ slug }: { slug: string }) {
             </div>
           </div>
         ) : (
-          <div className="bg-white p-6 min-w-[350px] max-w-[700px] rounded-lg shadow ">
+          <div className="bg-white p-6 rounded-lg shadow ">
             <h2 className="text-2xl font-bold mb-4 text-indigo-700">
               Course Modules
             </h2>
@@ -215,11 +216,11 @@ export default function CoursePage({ slug }: { slug: string }) {
             </ul>
             <div>
               <button
-                className="group w-full h-full text-left p-0 bg-transparent border-none mt-4"
+                className="group h-full text-left p-0 bg-transparent border-none mt-4"
                 onClick={() => setOpenDialog(true)}
               >
-                <div className="bg-indigo-600 rounded-2xl shadow overflow-hidden transition-transform transform group-hover:scale-105 duration-300 ease-in-out cursor-pointer">
-                  <div className="p-4 text-center">
+                <div className="bg-indigo-600 rounded-md shadow overflow-hidden transition-transform transform group-hover:scale-105 duration-300 ease-in-out cursor-pointer">
+                  <div className="py-2 px-4 text-center">
                     <h2 className="text-white font-semibold">
                       upload weekly material
                     </h2>

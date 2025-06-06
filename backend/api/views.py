@@ -441,27 +441,27 @@ class QuizViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.Gen
 
         return quizzes
 
-    def retrieve(self, request, *args, **kwargs):
-        difficulty = self.request.query_params.get('difficulty', "S")
-        user = request.user
-        queryset = Course.objects.all()
-        title_slug = self.kwargs['title_slug']
-        week_number = self.kwargs['week_number']
-        course = get_object_or_404(queryset, title_slug=title_slug)
+    # def retrieve(self, request, *args, **kwargs):
+    #     difficulty = self.request.query_params.get('difficulty', "S")
+    #     user = request.user
+    #     queryset = Course.objects.all()
+    #     title_slug = self.kwargs['title_slug']
+    #     week_number = self.kwargs['week_number']
+    #     course = get_object_or_404(queryset, title_slug=title_slug)
 
-        if course.user != user:
-            return Response({'detail': 'Not allowed to add weeks to this course.'}, status=status.HTTP_403_FORBIDDEN)
+    #     if course.user != user:
+    #         return Response({'detail': 'Not allowed to add weeks to this course.'}, status=status.HTTP_403_FORBIDDEN)
 
-        # get the correct week
-        queryset = Week.objects.all()
-        week = get_object_or_404(
-            queryset, course=course, week_number=week_number)
-        queryset = Quiz.objects.all()
+    #     # get the correct week
+    #     queryset = Week.objects.all()
+    #     week = get_object_or_404(
+    #         queryset, course=course, week_number=week_number)
+    #     queryset = Quiz.objects.all()
 
-        instance = get_object_or_404(
-            queryset, week=week, difficulty=difficulty)
-        serializer = self.get_serializer(instance)
-        return Response(serializer.data)
+    #     instance = get_object_or_404(
+    #         queryset, week=week, difficulty=difficulty)
+    #     serializer = self.get_serializer(instance)
+    #     return Response(serializer.data)
 
     def get_questions(self, week, difficulty):
         # Get all questions for this week

@@ -33,7 +33,6 @@ export default function Header() {
       try {
         const res = await api.get("/users/me/");
         setUser(res.data);
-        console.log(res.data);
       } catch (err: any) {
         setError("Failed to load user profile");
         router.replace("/login");
