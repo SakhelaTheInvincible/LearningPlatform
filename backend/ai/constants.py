@@ -42,7 +42,7 @@ Requirements:
    - Question: 15-25 words
    - Answer: 20-30 words
    - Explanation: 30-50 words
-5. Difficulty must be outputed as it is: Beginner|Base Knowledge|Intermediate|Advanced|Expert
+5. Difficulty must be outputted as it is: Beginner|Base Knowledge|Intermediate|Advanced|Expert
 6. Choice means only 1 correct answer, multiple_choice means minimum 2 correct answers
 8. Please, don't mix question types and questions themselves, for example, if question type is true_false, don't output open-question type answer
 9. for choice questions at the end of question (text) output choices like this for example: a) something b) nothing c) anything..., and for answer just output the letter: a, b, c....
@@ -71,7 +71,7 @@ ANSWER_COMPARISON_TEMPLATE = """
 Compare a user's answer with the correct answer and determine if they are semantically equivalent.
 
 Context:
-- Correct Answer: {correct_answer}
+- Correct Answer: {answer}
 - User's Answer: {user_answer}
 
 Rules for comparison:
@@ -80,8 +80,13 @@ Rules for comparison:
    - Accept different phrasings that convey the same meaning
    - Be somewhat lenient but ensure core understanding is demonstrated
 
-Determine if the answers are equivalent and respond with:
-true/false
+Please provide your response in JSON format:
+{{
+    "is_correct": true/false,
+    "explanation": "Brief explanation of why the answer is correct or incorrect"
+}}
+
+The response must be valid JSON.
 """
 
 
@@ -98,7 +103,7 @@ language name / None
 """
 
 CODE_COMPARISON_TEMPLATE = """
-Compare a user's code with the correct code and determine if they are logicallyequivalent.
+Compare a user's code with the correct code and determine if they are logically equivalent.
 
 Context:
 - Correct code: {correct_answer}

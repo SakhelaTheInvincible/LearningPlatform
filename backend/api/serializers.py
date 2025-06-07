@@ -276,16 +276,6 @@ class CourseListSerializer(serializers.ModelSerializer):
                   'image', 'is_completed']
 
 
-# class OnlyCourseSerializer(serializers.ModelSerializer):
-#     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-#     title_slug = serializers.SlugField(read_only=True)
-
-#     class Meta:
-#         model = Course
-#         fields = ['id', 'title', 'title_slug', 'duration_weeks', 'description', 'user',
-#                   'image', 'language', 'is_completed']
-
-# ====================#
 
 
 class QuestionSerializer(serializers.ModelSerializer):

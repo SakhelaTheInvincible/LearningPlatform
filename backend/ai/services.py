@@ -42,8 +42,7 @@ def generate_material_summary(material: str) -> str:
             last_sentence += '.'
     
     return "\n\n".join(full_summary)
-    
-# def generate_questions_for_week(week: Week) -> dict:
+
 
 
 def generate_questions_for_week(week: Week) -> dict:
@@ -112,23 +111,19 @@ def generate_questions_for_week(week: Week) -> dict:
     return questions_data
 
 
-def compare_answers(question_type: str, correct_answer: str, user_answer: str) -> dict:
-    if question_type not in ['open', 'coding']:
-        raise ValueError("Question type must be 'open' or 'coding'")
-        
+def compare_open_answers(answer: str, user_answer: str) -> dict:
+    """Compare open question answers."""
     client = get_ai_client()
-    prompt = ""
-    if question_type == 'open':
-        prompt = ANSWER_COMPARISON_TEMPLATE.format(
-            correct_answer=correct_answer,
-            user_answer=user_answer
-        )
-    else:
-        prompt = CODE_COMPARISON_TEMPLATE.format(
-            correct_answer=correct_answer,
-            user_answer=user_answer
-        )
-    
+
+    # Convert user_answer to string if it's a list
+    if isinstance(user_answer, list):
+        user_answer = " ".join(user_answer)
+
+    prompt = ANSWER_COMPARISON_TEMPLATE.format(
+        answer=answer,
+        user_answer=user_answer
+    )
+
     try:
         response = client.chat.completions.create(
             model="deepseek-chat",
@@ -137,25 +132,49 @@ def compare_answers(question_type: str, correct_answer: str, user_answer: str) -
             response_format={"type": "json_object"}
         )
         result = json.loads(response.choices[0].message.content)
-        if question_type == 'open':
-            return {
-                'is_correct': bool(result)
-            }
-            
-        else:
-            return {
-                'user_score': result['user_score'],
-                'error': result['error']
-            }
-            
+        return result
+
+    # {
+    #     "is_correct": true/false,
+    #     "explanation": "Brief explanation of why the answer is correct or incorrect"
+    # }
+    except Exception as e:
+        print(f"Error in open answer comparison: {str(e)}")
+        result = {
+            'is_correct': user_answer.lower().strip() == answer.lower().strip(),
+            'explanation': ""
+        }
+        return result
+
+
+def compare_coding_answers(answer: str, user_answer: str) -> dict:
+    """Compare coding question answers."""
+    client = get_ai_client()
+    prompt = CODE_COMPARISON_TEMPLATE.format(
+        answer=answer,
+        user_answer=user_answer
+    )
+
+    try:
+        response = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            response_format={"type": "json_object"}
+        )
+        result = json.loads(response.choices[0].message.content)
+        return {
+            'user_score': result['user_score'],
+            'error': result['error']
+        }
         
     except Exception as e:
-        print(f"Error in answer comparison: {str(e)}")
+        print(f"Error in coding answer comparison: {str(e)}")
         # Fallback to basic string comparison if AI fails
         return {
-            'is_correct': user_answer.lower().strip() == correct_answer.lower().strip()
+            'user_score': 0,
+            'error': "logic error in this line ..."
         }
-
 
 
 def check_language(course_title: str) -> str:
