@@ -31,8 +31,45 @@ Material:
 {chunk}
 """
 
+# QUESTION_GEN_TEMPLATE = """
+# Generate {num_questions} {difficulty}-level questions about this material.
+
+# Requirements:
+# 1. Include these question types: {question_types}
+# 2. Test both factual recall and conceptual understanding
+# 3. Format as JSON with: question, answer, explanation, type, difficulty
+# 4. Word limits:
+#    - Question: 15-25 words
+#    - Answer: 20-30 words
+#    - Explanation: 30-50 words
+# 5. Difficulty must be outputted as it is: Beginner|Base Knowledge|Intermediate|Advanced|Expert
+# 6. Choice means only 1 correct answer, multiple_choice means minimum 2 correct answers
+# 8. Please, don't mix question types and questions themselves, for example, if question type is true_false, don't output open-question type answer
+# 9. for choice questions at the end of question (text) output choices like this for example: a) something b) nothing c) anything..., and for answer just output the letter: a, b, c....
+# 10. for multiple choice questions do the same as choice, but in answer output string with commas: a,b,c,....
+# 11. balance question_types, use probability distribution for {difficulty} {distribution}.
+
+# Material Excerpt:
+# {chunk}
+
+# OUTPUT FORMAT:
+# {{
+#   "questions": [
+#     {{
+#       "question": "...",
+#       "answer": "...",
+#       "explanation": "...",
+#       "type": "...",
+#       "difficulty": "..."
+#     }}
+#   ],
+#   "continuation_marker": "..."
+# }}
+#"""
+# Updated template for batch processing all difficulties
 QUESTION_GEN_TEMPLATE = """
-Generate {num_questions} {difficulty}-level questions about this material.
+Generate questions about this material with the following distribution:
+{difficulty_distribution}
 
 Requirements:
 1. Include these question types: {question_types}
@@ -44,10 +81,10 @@ Requirements:
    - Explanation: 30-50 words
 5. Difficulty must be outputted as it is: Beginner|Base Knowledge|Intermediate|Advanced|Expert
 6. Choice means only 1 correct answer, multiple_choice means minimum 2 correct answers
-8. Please, don't mix question types and questions themselves, for example, if question type is true_false, don't output open-question type answer
-9. for choice questions at the end of question (text) output choices like this for example: a) something b) nothing c) anything..., and for answer just output the letter: a, b, c....
-10. for multiple choice questions do the same as choice, but in answer output string with commas: a,b,c,....
-11. balance question_types, use probability distribution for {difficulty} {distribution}.
+7. Don't mix question types and questions themselves
+8. For choice questions: end with a) something b) nothing c) anything..., answer with letter: a, b, c
+9. For multiple choice: same format, answer with comma-separated letters: a,b,c
+10. Balance question types across all difficulties
 
 Material Excerpt:
 {chunk}
@@ -62,8 +99,7 @@ OUTPUT FORMAT:
       "type": "...",
       "difficulty": "..."
     }}
-  ],
-  "continuation_marker": "..."
+  ]
 }}
 """
 

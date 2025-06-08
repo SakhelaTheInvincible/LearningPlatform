@@ -7,108 +7,107 @@ from .constants import (
     DIFFICULTY_MAPPING, ANSWER_COMPARISON_TEMPLATE, DISTRIBUTIONS, CHECK_LANGUAGE_TEMPLATE, CODE_COMPARISON_TEMPLATE,
     CODE_DIFFICULTIES, CODE_GENERATION_TEMPLATE
 )
-
+from transformers import pipeline
 import textwrap
-from typing import Dict, List, Tuple
+import json
+import textwrap
+import os
+from concurrent.futures import ThreadPoolExecutor
+
 
 
 def generate_material_summary(material: str) -> str:
-    client = get_ai_client()
-    chunks = textwrap.wrap(material, width=MAX_CHUNK_SIZE)
+    chunks = textwrap.wrap(material, width=1024)
     full_summary = []
-    last_sentence = ""
-    
+
+    summarizer = pipeline("summarization", model="facebook/bart-large-cnn", device=0)
+
     for chunk in chunks:
-        # Add context if available
-        prompt = SUMMARY_TEMPLATE.format(chunk=chunk)
-        if last_sentence:
-            prompt = f"Context: {last_sentence}\n\n" + prompt
-        
-        summary_response = client.chat.completions.create(
-            model="deepseek-chat",
-            messages=[{
-                "role": "user", 
-                "content": prompt
-            }],
-            temperature=0.5
-        )
-        
-        chunk_summary = summary_response.choices[0].message.content
-        full_summary.append(chunk_summary)
-        
-        sentences = chunk_summary.split('.')
-        last_sentence = sentences[-1].strip() if sentences else ""
-        if last_sentence and not last_sentence.endswith('.'):
-            last_sentence += '.'
-    
+        input_length = len(chunk.split())
+        target_length = int(input_length * 0.8)
+        min_len = max(30, int(target_length * 0.6))
+
+        try:
+            result = summarizer(
+                chunk,
+                min_length=min_len,
+                do_sample=False,
+                clean_up_tokenization_spaces=True
+            )
+            summary = result[0]['summary_text'].strip()
+            full_summary.append(' '.join(summary.split()))
+        except Exception as e:
+            print(f"Error summarizing chunk: {str(e)}")
+            full_summary.append(chunk)
+
     return "\n\n".join(full_summary)
 
 
 
-def generate_questions_for_week(week: Week) -> dict:
+# def generate_questions_for_week(week: Week) -> dict:
 
-    try:
-        material = week.materials.first()
-        if not material or not material.summarized_material:
-            raise ValueError("Material summary not generated yet")
-    except Material.DoesNotExist:
-        raise ValueError(f"No material found for week {week.week_number}")
+#     try:
+#         material = week.materials.first()
+#         if not material or not material.summarized_material:
+#             raise ValueError("Material summary not generated yet")
+#     except Material.DoesNotExist:
+#         raise ValueError(f"No material found for week {week.week_number}")
 
-    client = get_ai_client()
-    raw_questions = []
+#     client = get_ai_client()
+#     raw_questions = []
     
-    summarized_material = material.summarized_material
-    chunks = textwrap.wrap(summarized_material, width=MAX_CHUNK_SIZE)
+#     summarized_material = material.summarized_material
+#     chunks = textwrap.wrap(summarized_material, width=MAX_CHUNK_SIZE)
 
-    for chunk_index, chunk in enumerate(chunks):
-        word_count = len(chunk.split())
+#     for chunk_index, chunk in enumerate(chunks):
+#         word_count = len(chunk.split())
 
-        # Dynamic question count scaling (approx. 10 questions per 1000 words)
-        questions_per_level = max(2, min(12, (word_count // 1000) * 2))
+#         # Dynamic question count scaling (approx. 10 questions per 1000 words)
+#         questions_per_level = max(2, min(12, (word_count // 1000) * 2))
 
-        for difficulty in DIFFICULTIES:
-            prompt = QUESTION_GEN_TEMPLATE.format(
-                num_questions=questions_per_level,
-                difficulty=difficulty,
-                chunk=chunk,
-                question_types=QUESTION_TYPE_CHOICES,
-                distribution=DISTRIBUTIONS
-            )
+#         for difficulty in DIFFICULTIES:
+#             prompt = QUESTION_GEN_TEMPLATE.format(
+#                 num_questions=questions_per_level,
+#                 difficulty=difficulty,
+#                 chunk=chunk,
+#                 question_types=QUESTION_TYPE_CHOICES,
+#                 distribution=DISTRIBUTIONS
+#             )
 
-            try:
-                response = client.chat.completions.create(
-                    model="deepseek-chat",
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.7,
-                    response_format={"type": "json_object"}
-                )
-                result = json.loads(response.choices[0].message.content)
-                raw_questions.extend(result['questions'])
+#             try:
+#                 response = client.chat.completions.create(
+#                     model="deepseek-chat",
+#                     messages=[{"role": "user", "content": prompt}],
+#                     temperature=0.7,
+#                     response_format={"type": "json_object"}
+#                 )
+#                 result = json.loads(response.choices[0].message.content)
+#                 raw_questions.extend(result['questions'])
 
-            except Exception as e:
-                print(f"[Chunk {chunk_index}] Error generating {difficulty} questions: {str(e)}")
+#             except Exception as e:
+#                 print(f"[Chunk {chunk_index}] Error generating {difficulty} questions: {str(e)}")
 
-                for _ in range(questions_per_level):
-                    raw_questions.append({
-                        "question": f"Sample {difficulty} question about this section",
-                        "answer": f"Sample {difficulty} answer",
-                        "explanation": f"Sample {difficulty} explanation",
-                        "type": "multiple_choice",
-                        "difficulty": DIFFICULTY_MAPPING[difficulty]
-                    })
+#                 for _ in range(questions_per_level):
+#                     raw_questions.append({
+#                         "question": f"Sample {difficulty} question about this section",
+#                         "answer": f"Sample {difficulty} answer",
+#                         "explanation": f"Sample {difficulty} explanation",
+#                         "type": "multiple_choice",
+#                         "difficulty": DIFFICULTY_MAPPING[difficulty]
+#                     })
 
-    questions_data = [
-        {
-            "week": week.id,
-            "difficulty": DIFFICULTY_MAPPING[q['difficulty']],
-            "question_type": q.get('type', ''),
-            "question_text": q['question'],
-            "answer": q['answer'],
-            "explanation": q['explanation'],
-        }
-        for q in raw_questions
-    ]
-    return questions_data
+#     questions_data = [
+#         {
+#             "week": week.id,
+#             "difficulty": DIFFICULTY_MAPPING[q['difficulty']],
+#             "question_type": q.get('type', ''),
+#             "question_text": q['question'],
+#             "answer": q['answer'],
+#             "explanation": q['explanation'],
+#         }
+#         for q in raw_questions
+#     ]
+#     return questions_data
 
 
 def compare_open_answers(answer: str, user_answer: str) -> dict:
@@ -275,3 +274,89 @@ def generate_coding_problems_for_week(week: Week) -> dict:
         "difficulty_distribution": difficulty_counts,
         "average_codes_per_level": len(created_codes) // len(CODE_DIFFICULTIES)
     }
+    
+def make_api_call(client, prompt):
+    """Thread-safe API call function"""
+    try:
+        response = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+            response_format={"type": "json_object"}
+        )
+        return response
+    except Exception as e:
+        print(f"API call error: {str(e)}")
+        return None
+
+def generate_questions_for_week(week: Week) -> dict:
+    try:
+        material = week.materials.first()
+        if not material or not material.summarized_material:
+            raise ValueError("Material summary not generated yet")
+    except Material.DoesNotExist:
+        raise ValueError(f"No material found for week {week.week_number}")
+
+    client = get_ai_client()  # Use your existing client
+    
+    summarized_material = material.summarized_material
+    # Use larger chunks to reduce API calls
+    chunks = textwrap.wrap(summarized_material, width=MAX_CHUNK_SIZE * 2)
+    
+    # Process chunks concurrently using ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = []
+        
+        for chunk in chunks:
+            word_count = len(chunk.split())
+            base_questions = max(2, min(12, (word_count // 1000) * 2))
+            
+            # Create distribution string for all difficulties in one request
+            difficulty_dist = []
+            for difficulty in DIFFICULTIES:
+                difficulty_dist.append(f"- {base_questions} {difficulty}-level questions")
+            
+            prompt = QUESTION_GEN_TEMPLATE.format(
+                difficulty_distribution="\n".join(difficulty_dist),
+                chunk=chunk,
+                question_types=QUESTION_TYPE_CHOICES,
+            )
+            
+            # Submit task to thread pool
+            future = executor.submit(make_api_call, client, prompt)
+            futures.append(future)
+        
+        # Collect results
+        raw_questions = []
+        for i, future in enumerate(futures):
+            try:
+                response = future.result(timeout=60)  # 60 second timeout per request
+                if response:
+                    result = json.loads(response.choices[0].message.content)
+                    raw_questions.extend(result.get('questions', []))
+            except Exception as e:
+                print(f"[Chunk {i}] Error: {str(e)}")
+                # Add fallback questions
+                for difficulty in DIFFICULTIES:
+                    raw_questions.append({
+                        "question": f"Sample {difficulty} question about this section",
+                        "answer": f"Sample {difficulty} answer",
+                        "explanation": f"Sample {difficulty} explanation",
+                        "type": "multiple_choice",
+                        "difficulty": difficulty
+                    })
+    
+    # Format for database
+    questions_data = [
+        {
+            "week": week.id,
+            "difficulty": DIFFICULTY_MAPPING.get(q['difficulty'], q['difficulty']),
+            "question_type": q.get('type', ''),
+            "question_text": q['question'],
+            "answer": q['answer'],
+            "explanation": q['explanation'],
+        }
+        for q in raw_questions
+    ]
+    
+    return questions_data
