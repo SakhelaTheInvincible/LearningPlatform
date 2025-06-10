@@ -1,6 +1,9 @@
-
 import os
 from docx import Document
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from django.conf import settings
+from ai.services import generate_material_summary
 
 def extract_text_from_docx(file_path):
     try:
@@ -48,4 +51,44 @@ def extract_text(file_path):
         return ""
 
 
-## pitesseract for pgn and Image foramts and pp also 
+def process_material_file(file):
+    """Process uploaded material file and return extracted text and summary.
+    
+    Args:
+        file: Uploaded file object
+        
+    Returns:
+        tuple: (extracted_text, summarized_text)
+        
+    Raises:
+        ValueError: If file processing fails
+    """
+    try:
+        # Save file temporarily
+        file_path = default_storage.save(
+            f'temp_{file.name}', ContentFile(file.read()))
+        full_file_path = os.path.join(settings.MEDIA_ROOT, file_path)
+
+        try:
+            # Extract text from file
+            material = extract_text(full_file_path)
+            if not material:
+                raise ValueError('Could not extract text from file')
+
+            # Generate summary
+            try:
+                summarized_material = generate_material_summary(
+                    material=material)
+            except Exception as e:
+                # Fallback summary if AI generation fails
+                summarized_material = material[:500] + "..."
+
+            return material, summarized_material
+
+        finally:
+            # Clean up temp file
+            if os.path.exists(full_file_path):
+                os.remove(full_file_path)
+
+    except Exception as e:
+        raise ValueError(f'Error processing file: {str(e)}')
