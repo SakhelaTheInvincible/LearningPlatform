@@ -50,6 +50,9 @@ export default function WeekQuestions() {
     passing_requirement_display: 50,
     user_score: 0,
   });
+  const [answerExplanations, setAnswerExplanations] = useState<
+    Record<number, string>
+  >({});
 
   function getHigherDifficulty(current: Difficulty): Difficulty {
     const index = difficultyOrder.indexOf(current);
@@ -88,32 +91,70 @@ export default function WeekQuestions() {
     }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     let correct = 0;
     const results: Record<number, "correct" | "incorrect"> = {};
 
+    const openQuestions = [];
+    const newExplanations: Record<number, string> = {};
+
     for (const q of questions) {
-      if (q.question_type == "open") {
-        continue;
-      }
-      const userAnswer = userAnswers[q.id] || [];
-      const correctAnswer = q.answer;
-
-      const normalizedUserAnswer = userAnswer
-        .map((a) => a.trim().toLowerCase())
-        .sort()
-        .join(",");
-      const normalizedCorrectAnswer = correctAnswer
-        .split("|")
-        .map((a) => a.trim().toLowerCase())
-        .sort()
-        .join(",");
-
-      if (normalizedUserAnswer === normalizedCorrectAnswer) {
-        correct += 1;
-        results[q.id] = "correct";
+      if (q.question_type === "open") {
+        openQuestions.push({
+          id: q.id,
+          user_answer: userAnswers[q.id] || "",
+          answer: q.answer,
+        });
       } else {
-        results[q.id] = "incorrect";
+        const userAnswer = userAnswers[q.id] || [];
+        const correctAnswer = q.answer;
+
+        const normalizedUserAnswer = userAnswer
+          .map((a) => a.trim().toLowerCase())
+          .sort()
+          .join(",");
+
+        const normalizedCorrectAnswer = correctAnswer
+          .split("|")
+          .map((a) => a.trim().toLowerCase())
+          .sort()
+          .join(",");
+
+        if (normalizedUserAnswer === normalizedCorrectAnswer) {
+          correct += 1;
+          results[q.id] = "correct";
+        } else {
+          results[q.id] = "incorrect";
+        }
+      }
+    }
+
+    console.log(openQuestions);
+
+    if (openQuestions.length > 0) {
+      try {
+        setLoading(true);
+        const response = await api.post(
+          `/courses/${slug}/weeks/${weekNumber}/quizzes/evaluate_open_questions/`,
+          openQuestions
+        );
+
+        console.log(response.data);
+
+        const openResults = await response.data;
+        for (const item of openResults) {
+          if (item.is_correct) {
+            correct += 1;
+            results[item.id] = "correct";
+          } else {
+            results[item.id] = "incorrect";
+          }
+          if (item.explanation) {
+            newExplanations[item.id] = item.explanation;
+          }
+        }
+      } catch (error) {
+        console.error("Error evaluating open questions:", error);
       }
     }
 
@@ -124,6 +165,19 @@ export default function WeekQuestions() {
     }
     setScore(percentage);
     setAnswerResults(results);
+    setAnswerExplanations((prev) => ({ ...prev, ...newExplanations }));
+    console.log(results);
+    setLoading(false);
+    console.log({ user_score: percentage });
+    try {
+      await api.put(
+        `/courses/${slug}/weeks/${weekNumber}/quizzes/${quizDifficulty}/set_user_score/`,
+        { user_score: percentage }
+      );
+      console.log("Score saved successfully");
+    } catch (err) {
+      console.error("Failed to save score:", err);
+    }
   };
 
   useEffect(() => {
@@ -336,6 +390,11 @@ export default function WeekQuestions() {
                           onChange={(answer) =>
                             handleAnswerChange(q.id, answer)
                           }
+                          isCorrect={answerResults[q.id]}
+                          value={userAnswers[q.id] || []}
+                          isSubmitted={finishedQuiz}
+                          answer={q.answer}
+                          explanation={answerExplanations[q.id]}
                         />
                       );
                     }
@@ -387,6 +446,7 @@ export default function WeekQuestions() {
                                 setFinishedQuiz(false);
                                 setAnswerResults({});
                                 setUserAnswers({});
+                                setAnswerExplanations({});
                                 window.scrollTo({ top: 0 });
                                 await fetchCourse(quizDifficulty);
                               }}
@@ -418,6 +478,7 @@ export default function WeekQuestions() {
                                     setFinishedQuiz(false);
                                     setAnswerResults({});
                                     setUserAnswers({});
+                                    setAnswerExplanations({});
                                     window.scrollTo({ top: 0 });
                                     await fetchCourse(
                                       getHigherDifficulty(quizDifficulty)
@@ -453,6 +514,7 @@ export default function WeekQuestions() {
                                     setFinishedQuiz(false);
                                     setAnswerResults({});
                                     setUserAnswers({});
+                                    setAnswerExplanations({});
                                     window.scrollTo({ top: 0 });
                                     await fetchCourse(
                                       getLowerDifficulty(quizDifficulty)
