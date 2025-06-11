@@ -4,6 +4,8 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.conf import settings
 from ai.services import generate_material_summary
+from PyPDF2 import PdfReader
+from striprtf.striprtf import rtf_to_text
 
 def extract_text_from_docx(file_path):
     try:
@@ -34,6 +36,37 @@ def extract_text_from_txt(file_path):
         print(f"Error extracting text from {file_path}: {e}")
         return ""
 
+
+def extract_text_from_pdf(file_path):
+    try:
+        reader = PdfReader(file_path)
+        text = []
+        for page in reader.pages:
+            text.append(page.extract_text())
+        return '\n'.join(text)
+    except Exception as e:
+        print(f"Error extracting text from PDF {file_path}: {e}")
+        return ""
+
+
+def extract_text_from_markdown(file_path):
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            return file.read()
+    except Exception as e:
+        print(f"Error extracting text from Markdown {file_path}: {e}")
+        return ""
+
+
+def extract_text_from_rtf(file_path):
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            rtf_content = file.read()
+            return rtf_to_text(rtf_content)
+    except Exception as e:
+        print(f"Error extracting text from RTF {file_path}: {e}")
+        return ""
+
 def extract_text(file_path):
     if not os.path.exists(file_path):
         print(f"File not found: {file_path}")
@@ -42,13 +75,19 @@ def extract_text(file_path):
     _, ext = os.path.splitext(file_path)
     ext = ext.lower()
     
-    if ext == '.docx':
-        return extract_text_from_docx(file_path)
-    elif ext == '.txt':
-        return extract_text_from_txt(file_path)
+    extractors = {
+        '.docx': extract_text_from_docx,
+        '.txt': extract_text_from_txt,
+        '.pdf': extract_text_from_pdf,
+        '.md': extract_text_from_markdown,
+        '.rtf': extract_text_from_rtf
+    }
+
+    extractor = extractors.get(ext)
+    if extractor:
+        return extractor(file_path)
     else:
-        print(f"Unsupported file extension: {ext}")
-        return ""
+        raise ValueError(f'Unsupported file extension: {ext}')
 
 
 def process_material_file(file):

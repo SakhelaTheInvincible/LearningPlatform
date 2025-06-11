@@ -134,11 +134,10 @@ class AdminUserViewSet(mixins.ListModelMixin,
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAdminUser]
     parser_classes = (JSONParser, MultiPartParser, FormParser)
-    # pagination_class = StandardResultsSetPagination
 
     # Whitelist of allowed fields for ordering
     ALLOWED_ORDER_FIELDS = {
-        'username', 'email', 'first_name', 'last_name', 'date_joined'
+        'username', 'email', 'first_name', 'last_name', 'date_joined',
         '-username', '-email', '-first_name', '-last_name', '-date_joined'
     }
 
@@ -167,7 +166,7 @@ class AdminUserViewSet(mixins.ListModelMixin,
         # Validate and apply ordering
         if order_by not in self.ALLOWED_ORDER_FIELDS:
             return Response(
-                {'error': 'Invalid ordering field'},
+                {'error': f'Invalid ordering field. Allowed fields are: {", ".join(sorted(self.ALLOWED_ORDER_FIELDS))}'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -406,6 +405,7 @@ class MaterialViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
                     {'detail': 'Not allowed to add materials to this course.'},
                     status=status.HTTP_403_FORBIDDEN
                 )
+
             # Validate file
             file = request.FILES.get('material')
             if not file:
@@ -413,6 +413,16 @@ class MaterialViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
                     {'detail': 'No file provided'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
+
+            # Validate file extension
+            allowed_extensions = {'.txt', '.docx', '.pdf', '.md', '.rtf'}
+            file_ext = os.path.splitext(file.name)[1].lower()
+            if file_ext not in allowed_extensions:
+                return Response(
+                    {'detail': f'Unsupported file type. Allowed types: {", ".join(allowed_extensions)}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
             # Process file
             try:
                 material, summarized_material = self.process_material_file(
@@ -445,6 +455,7 @@ class MaterialViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
             )
 
         except Exception as e:
+            print(f"Error in material creation: {str(e)}")
             return Response(
                 {'detail': f'Error processing material: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
