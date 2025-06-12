@@ -8,8 +8,7 @@ interface SignupDialogProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
-  is_superuser: boolean
-
+  is_superuser: boolean;
 }
 
 export default function SignupDialog({
@@ -17,8 +16,7 @@ export default function SignupDialog({
   onClose,
   onSuccess,
   is_superuser,
-}: SignupDialogProps,
-) {
+}: SignupDialogProps) {
   const router = useRouter();
   const [formData, setFormData] = useState({
     username: "",

@@ -5,6 +5,7 @@ import WeekMenu from "@/src/components/weekMenu";
 import Breadcrumbs from "@/src/components/Breadcrumbs";
 import { useParams } from "next/navigation";
 import api from "@/src/lib/axios";
+import LoadingPage from "@/src/components/LoadingPage";
 
 interface WeekInfo {
   week_number: number;
@@ -61,7 +62,12 @@ export default function WeekReading() {
     if (slug && weekNumber) fetchCourse();
   }, [slug, weekNumber]);
 
-  if (loading) return <div className="p-10">Loading course...</div>;
+  if (loading)
+    return (
+      <div className="p-10">
+        <LoadingPage />
+      </div>
+    );
   if (!material) return <div className="p-10">Material not found.</div>;
   return (
     <>

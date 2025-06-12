@@ -13,9 +13,10 @@ interface TrueFalseQuestionProps {
   onChange: (answer: string[]) => void;
   isCorrect?: "correct" | "incorrect";
   selectedAnswer?: string;
+  answer?: string;
   isSubmitted?: boolean;
-  answer: string;
   explanation?: string;
+  showExplanations: boolean;
 }
 
 export default function TrueFalseQuestion({
@@ -25,13 +26,12 @@ export default function TrueFalseQuestion({
   onChange,
   isCorrect,
   selectedAnswer,
-  isSubmitted,
   answer,
+  isSubmitted,
   explanation,
+  showExplanations,
 }: TrueFalseQuestionProps) {
   const [showAnswer, setShowAnswer] = useState(false);
-  const [showExplanation, setShowExplanation] = useState(false);
-
   const handleChange = (value: string) => {
     if (isCorrect !== undefined) return; // prevent changes after grading
     onChange([value]);
@@ -45,6 +45,9 @@ export default function TrueFalseQuestion({
       return "bg-red-100 text-red-800";
     }
     return "";
+  };
+  const isCorrectAnswer = (value: string) => {
+    return answer?.includes(value);
   };
 
   return (
@@ -81,39 +84,38 @@ export default function TrueFalseQuestion({
               disabled={isCorrect !== undefined}
             />
             <span className="capitalize">{value}</span>
+            {isCorrect !== undefined && isCorrectAnswer(value) && (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="inline w-4 h-4 ml-1 align-middle text-indigo-600"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="m4.5 12.75 6 6 9-13.5"
+                />
+              </svg>
+            )}
           </label>
         ))}
       </div>
-      {isSubmitted && (
-        <div className="mt-3 space-y-2">
+      {isSubmitted && showExplanations && (
+        <div className="mt-3">
           <button
             onClick={() => setShowAnswer((prev) => !prev)}
             className="text-sm ml-3 text-indigo-700 underline hover:text-indigo-900"
           >
-            {showAnswer ? "Hide Answer" : "Show Answer"}
+            {showAnswer ? "Hide Explanation" : "Show Explanation"}
           </button>
 
           {showAnswer && answer && (
             <div className="mt-2 p-3 rounded border border-indigo-500 text-sm text-indigo-800">
-              <strong>Correct Answer:</strong> {answer}
+              <strong>Explanation:</strong> {explanation}
             </div>
-          )}
-
-          {explanation && (
-            <>
-              <button
-                onClick={() => setShowExplanation((prev) => !prev)}
-                className="text-sm ml-3 text-indigo-700 underline hover:text-indigo-900"
-              >
-                {showExplanation ? "Hide Explanation" : "Show Explanation"}
-              </button>
-
-              {showExplanation && (
-                <div className="mt-2 p-3 rounded border border-indigo-500 text-sm text-indigo-800">
-                  <strong>Explanation:</strong> {explanation}
-                </div>
-              )}
-            </>
           )}
         </div>
       )}

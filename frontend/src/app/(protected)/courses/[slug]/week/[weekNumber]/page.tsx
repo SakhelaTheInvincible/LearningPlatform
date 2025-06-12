@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import api from "@/src/lib/axios";
 import { use } from "react";
 import { useParams } from "next/navigation";
+import LoadingPage from "@/src/components/LoadingPage";
 
 interface CourseInfo {
   title: string;
@@ -83,7 +84,7 @@ export default function WeekLearning() {
     if (slug && weekNumber) fetchCourse();
   }, [slug, weekNumber]);
 
-  if (loading) return <div className="p-10">Loading course...</div>;
+  if (loading) return <div className="p-10"><LoadingPage/></div>;
   if (!course) return <div className="p-10">Course not found.</div>;
 
   return (

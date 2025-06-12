@@ -8,6 +8,7 @@ import { Dialog, Transition } from "@headlessui/react";
 import SignupDialog from "@/src/components/SignupDialog";
 import { Listbox } from "@headlessui/react";
 import { CheckIcon, ChevronUpDownIcon } from "@heroicons/react/20/solid";
+import LoadingPage from "@/src/components/LoadingPage";
 
 export default function AdminPage() {
   const [search, setSearch] = useState("");
@@ -25,6 +26,9 @@ export default function AdminPage() {
   });
   const [openRegular, setOpenRegular] = useState(false);
   const [openAdmin, setOpenAdmin] = useState(false);
+  const [openUserTypeDialog, setOpenUserTypeDialog] = useState(false);
+  const [isSuperuser, setIsSuperuser] = useState(false);
+  const [openSignupDialog, setOpenSignupDialog] = useState(false);
 
   const sortOptions = [
     { label: "Username", value: "username" },
@@ -37,7 +41,7 @@ export default function AdminPage() {
     setLoading(true);
     try {
       const res = await api.get("/admin/users/");
-      console.log(res.data)
+      console.log(res.data);
       setUsers(res.data);
     } catch (err) {
       setError("Failed to load users.");
@@ -133,7 +137,12 @@ export default function AdminPage() {
     }
   };
 
-  if (loading) return <div className="p-8 text-center">Loading...</div>;
+  if (loading)
+    return (
+      <div className="p-8 text-center">
+        <LoadingPage />
+      </div>
+    );
   if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
 
   return (
@@ -145,39 +154,88 @@ export default function AdminPage() {
         </h1>
         <div className=""></div>
         <div className="p-10">
-          <button
-            onClick={() => setOpenRegular(true)}
-            className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
-          >
-            Create a new user
-          </button>
+          <div className="p-10">
+            <button
+              onClick={() => setOpenUserTypeDialog(true)}
+              className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+            >
+              Create a new user
+            </button>
+            <Transition appear show={openUserTypeDialog} as={Fragment}>
+              <Dialog
+                as="div"
+                className="relative z-50"
+                onClose={() => setOpenUserTypeDialog(false)}
+              >
+                <Transition.Child
+                  as={Fragment}
+                  enter="ease-out duration-300"
+                  enterFrom="opacity-0"
+                  enterTo="opacity-100"
+                  leave="ease-in duration-200"
+                  leaveFrom="opacity-100"
+                  leaveTo="opacity-0"
+                >
+                  <div className="fixed inset-0 bg-opacity-25" />
+                </Transition.Child>
+
+                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm overflow-y-auto">
+                  <div className="flex min-h-full items-center justify-center p-4 text-center">
+                    <Transition.Child
+                      as={Fragment}
+                      enter="ease-out duration-300"
+                      enterFrom="opacity-0 scale-95"
+                      enterTo="opacity-100 scale-100"
+                      leave="ease-in duration-200"
+                      leaveFrom="opacity-100 scale-100"
+                      leaveTo="opacity-0 scale-95"
+                    >
+                      <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
+                        <Dialog.Title
+                          as="h3"
+                          className="text-lg font-medium leading-6 text-gray-900"
+                        >
+                          Select user type
+                        </Dialog.Title>
+                        <div className="mt-4 space-y-4">
+                          <button
+                            onClick={() => {
+                              setIsSuperuser(false);
+                              setOpenSignupDialog(true);
+                            }}
+                            className="w-full bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+                          >
+                            Regular User
+                          </button>
+                          <button
+                            onClick={() => {
+                              setIsSuperuser(true);
+                              setOpenSignupDialog(true);
+                            }}
+                            className="w-full bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+                          >
+                            Admin User
+                          </button>
+                        </div>
+                      </Dialog.Panel>
+                    </Transition.Child>
+                  </div>
+                </div>
+              </Dialog>
+            </Transition>
+          </div>
 
           <SignupDialog
-            open={openRegular}
-            onClose={() => setOpenRegular(false)}
+            open={openSignupDialog}
+            onClose={() => {
+              setOpenSignupDialog(false);
+              setOpenUserTypeDialog(false);
+            }}
             onSuccess={() => {
               fetchUsers();
-              setOpenRegular(false);
+              setOpenSignupDialog(false);
             }}
-            is_superuser={false}
-          />
-        </div>
-        <div className="p-10">
-          <button
-            onClick={() => setOpenAdmin(true)}
-            className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
-          >
-            Create a new admin User
-          </button>
-
-          <SignupDialog
-            open={openAdmin}
-            onClose={() => setOpenAdmin(false)}
-            onSuccess={() => {
-              fetchUsers();
-              setOpenAdmin(false);
-            }}
-            is_superuser={true}
+            is_superuser={isSuperuser}
           />
         </div>
 
@@ -227,17 +285,19 @@ export default function AdminPage() {
                       key={option.value}
                       value={option.value}
                       className={({ active }) =>
-                        `relative cursor-default select-none py-2 pl-4 pr-10 ${active
-                          ? "bg-indigo-100 text-indigo-900"
-                          : "text-gray-900"
+                        `relative cursor-default select-none py-2 pl-4 pr-10 ${
+                          active
+                            ? "bg-indigo-100 text-indigo-900"
+                            : "text-gray-900"
                         }`
                       }
                     >
                       {({ selected }) => (
                         <>
                           <span
-                            className={`block truncate ${selected ? "font-medium" : "font-normal"
-                              }`}
+                            className={`block truncate ${
+                              selected ? "font-medium" : "font-normal"
+                            }`}
                           >
                             {option.label}
                           </span>

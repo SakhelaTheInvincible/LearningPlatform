@@ -6,6 +6,7 @@ import ProfileInfoCard from "@/src/components/ProfileInfoCard";
 import api from "@/src/lib/axios";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import LoadingPage from "@/src/components/LoadingPage";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -113,7 +114,12 @@ export default function ProfilePage() {
     }
   };
 
-  if (loading) return <div className="p-8 text-center">Loading...</div>;
+  if (loading)
+    return (
+      <div className="p-8 text-center">
+        <LoadingPage />
+      </div>
+    );
   if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
 
   return (

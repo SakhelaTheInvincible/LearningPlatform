@@ -4,11 +4,14 @@ import WeekMenu from "@/src/components/weekMenu";
 import Breadcrumbs from "@/src/components/Breadcrumbs";
 import MultipleChoiceQuestion from "@/src/components/MultipleChoicQuestion";
 import OpenEndedQuestion from "@/src/components/OpenEndedQuestion";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import api from "@/src/lib/axios";
 import ChoiceQuestion from "@/src/components/ChoiceQuestion";
 import TrueFalseQuestion from "@/src/components/TrueFalseQuestion";
+import { Dialog, Transition, Listbox } from "@headlessui/react";
+import DifficultySelect from "@/src/components/DifficultySelect";
+import LoadingPage from "@/src/components/LoadingPage";
 
 interface Question {
   id: number;
@@ -26,6 +29,13 @@ interface Quiz {
   user_score: number;
 }
 const difficultyOrder = ["A", "I", "S", "M", "N"] as const;
+const difficultyLabels: Record<(typeof difficultyOrder)[number], string> = {
+  A: "Advanced",
+  I: "Intermediate",
+  S: "Standard",
+  M: "Medium",
+  N: "Normal",
+};
 type Difficulty = (typeof difficultyOrder)[number];
 
 export default function WeekQuestions() {
@@ -35,6 +45,9 @@ export default function WeekQuestions() {
   const slug = params?.slug as string;
   const weekNumber = parseInt(params?.weekNumber as string);
   const [userAnswers, setUserAnswers] = useState<Record<number, string[]>>({});
+  const [correctAnswers, setCorrectAnswers] = useState<
+    Record<number, string[]>
+  >({});
   const [score, setScore] = useState(0);
   const [quizDifficulty, setQuizDifficulty] = useState<Difficulty>("S");
   const [answerResults, setAnswerResults] = useState<
@@ -53,6 +66,11 @@ export default function WeekQuestions() {
   const [answerExplanations, setAnswerExplanations] = useState<
     Record<number, string>
   >({});
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [randomizeQuestions, setRandomizeQuestions] = useState<boolean | null>(
+    null
+  );
+  const [showExplanations, setShowExplanations] = useState(true);
 
   function getHigherDifficulty(current: Difficulty): Difficulty {
     const index = difficultyOrder.indexOf(current);
@@ -143,11 +161,17 @@ export default function WeekQuestions() {
 
         const openResults = await response.data;
         for (const item of openResults) {
+          console.log(item.is_correct);
           if (item.is_correct == "true") {
             correct += 1;
             results[item.id] = "correct";
+            console.log("correct");
           } else {
             results[item.id] = "incorrect";
+            console.log("incorrect");
+          }
+          if (item.explanation) {
+            newExplanations[item.id] = item.explanation;
           }
         }
       } catch (error) {
@@ -162,6 +186,7 @@ export default function WeekQuestions() {
     }
     setScore(percentage);
     setAnswerResults(results);
+    setAnswerExplanations((prev) => ({ ...prev, ...newExplanations }));
     console.log(results);
     setLoading(false);
     console.log({ user_score: percentage });
@@ -183,7 +208,7 @@ export default function WeekQuestions() {
           `/courses/${slug}/weeks/${weekNumber}/quizzes/${quizDifficulty}/`
         );
         const data = res.data;
-        console.log(data);
+        // console.log(data);
         setQuiz(data);
         setQuestions(data.questions);
       } catch (error) {
@@ -193,18 +218,35 @@ export default function WeekQuestions() {
       }
     }
     fetchQuizzes();
-  }, []);
+  }, [quizDifficulty]);
 
   async function fetchCourse(difficulty: string) {
-    console.log(`/courses/${slug}/weeks/${weekNumber}/quizzes/${difficulty}`);
+    // console.log(`/courses/${slug}/weeks/${weekNumber}/quizzes/${difficulty}`);
     try {
-      const res = await api.get(
-        `/courses/${slug}/weeks/${weekNumber}/quizzes/${difficulty}`
-      );
-      const data = res.data;
-      setQuiz(data);
-      setQuestions(data.questions);
-      console.log(data);
+      if (randomizeQuestions) {
+        const res = await api.put(
+          `/courses/${slug}/weeks/${weekNumber}/quizzes/${difficulty}/`
+        );
+        const data = res.data;
+        setQuiz(data.quiz);
+        setQuestions(data.quiz.questions);
+        for (const q of data.quiz.questions) {
+          setCorrectAnswers((prev) => ({ ...prev, [q.id]: q.answer }));
+        }
+        // console.log(data);
+        // console.log(correctAnswers);
+      } else {
+        const res = await api.get(
+          `/courses/${slug}/weeks/${weekNumber}/quizzes/${difficulty}/`
+        );
+        const data = res.data;
+        setQuiz(data);
+        setQuestions(data.questions);
+        for (const q of data.questions) {
+          setCorrectAnswers((prev) => ({ ...prev, [q.id]: q.answer }));
+        }
+        console.log(data);
+      }
     } catch (error) {
       console.error("Failed to load course:", error);
     } finally {
@@ -212,7 +254,7 @@ export default function WeekQuestions() {
     }
   }
 
-  if (loading) return <div className="p-10">Loading course...</div>;
+  if (loading) return <LoadingPage />;
   if (!questions) return <div className="p-10">Questions not found.</div>;
   return (
     <>
@@ -255,9 +297,178 @@ export default function WeekQuestions() {
                 {!startedQuiz && (
                   <div className="">
                     <div className="rounded-md border border-gray-600 bg-indigo-50 p-6 shadow-sm space-y-4 max-w-md mx-auto mb-4 ">
-                      <h2 className="text-xl font-semibold text-indigo-700">
-                        Quiz Overview
-                      </h2>
+                      <div className="flex flex-row justify-between">
+                        <h2 className="text-xl font-semibold text-indigo-700">
+                          Quiz Overview
+                        </h2>
+                        <div className="">
+                          <button onClick={() => setIsSettingsOpen(true)}>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              strokeWidth={1.5}
+                              stroke="currentColor"
+                              className="size-6 hover:text-indigo-600 hover:cursor-pointer"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+                              />
+                            </svg>
+                          </button>
+                          <Transition
+                            appear
+                            show={isSettingsOpen}
+                            as={Fragment}
+                          >
+                            <Dialog
+                              as="div"
+                              className="relative z-50"
+                              onClose={() => setIsSettingsOpen(false)}
+                            >
+                              <Transition.Child
+                                as={Fragment}
+                                enter="ease-out duration-300"
+                                enterFrom="opacity-0"
+                                enterTo="opacity-100"
+                                leave="ease-in duration-200"
+                                leaveFrom="opacity-100"
+                                leaveTo="opacity-0"
+                              >
+                                <div className="fixed inset-0 bg-gray-700/50" />
+                              </Transition.Child>
+
+                              <div className="fixed inset-0 overflow-y-auto">
+                                <div className="flex min-h-full items-center justify-center p-4">
+                                  <Transition.Child
+                                    as={Fragment}
+                                    enter="ease-out duration-300"
+                                    enterFrom="opacity-0 scale-95"
+                                    enterTo="opacity-100 scale-100"
+                                    leave="ease-in duration-200"
+                                    leaveFrom="opacity-100 scale-100"
+                                    leaveTo="opacity-0 scale-95"
+                                  >
+                                    <Dialog.Panel className="relative w-full max-w-md transform overflow-visible rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all space-y-4">
+                                      <Dialog.Title
+                                        as="h3"
+                                        className="text-lg font-medium leading-6 text-indigo-700"
+                                      >
+                                        Quiz Settings
+                                      </Dialog.Title>
+
+                                      {/* Difficulty Select */}
+                                      <div className="">
+                                        <label className="block text-sm font-medium text-gray-700">
+                                          Difficulty
+                                        </label>
+                                        <DifficultySelect
+                                          quizDifficulty={quizDifficulty}
+                                          setQuizDifficulty={setQuizDifficulty}
+                                        />
+                                      </div>
+
+                                      {/* Randomization Choice */}
+                                      {/* <div className="space-y-1">
+                                        <label className="block text-sm font-medium text-gray-700 mt-8">
+                                          Randomize Questions?
+                                        </label>
+                                        <div className="flex gap-3">
+                                          <button
+                                            className={`px-4 py-2 rounded ${
+                                              randomizeQuestions
+                                                ? "bg-indigo-600 text-white"
+                                                : "bg-gray-200"
+                                            }`}
+                                            onClick={() =>
+                                              setRandomizeQuestions(true)
+                                            }
+                                          >
+                                            Yes
+                                          </button>
+                                          <button
+                                            className={`px-4 py-2 rounded ${
+                                              randomizeQuestions === false
+                                                ? "bg-indigo-600 text-white"
+                                                : "bg-gray-200"
+                                            }`}
+                                            onClick={() =>
+                                              setRandomizeQuestions(false)
+                                            }
+                                          >
+                                            No
+                                          </button>
+                                        </div>
+                                      </div> */}
+                                      {/* explanations */}
+                                      <div className="space-y-1">
+                                        <label className="block text-sm font-medium text-gray-700 mt-4 mb-2">
+                                          Show explataions?
+                                        </label>
+                                        <div className="flex gap-3">
+                                          <button
+                                            className={`px-4 py-2 rounded ${
+                                              showExplanations
+                                                ? "bg-indigo-600 text-white"
+                                                : "bg-gray-200"
+                                            }`}
+                                            onClick={() =>
+                                              setShowExplanations(true)
+                                            }
+                                          >
+                                            Yes
+                                          </button>
+                                          <button
+                                            className={`px-4 py-2 rounded ${
+                                              showExplanations === false
+                                                ? "bg-indigo-600 text-white"
+                                                : "bg-gray-200"
+                                            }`}
+                                            onClick={() =>
+                                              setShowExplanations(false)
+                                            }
+                                          >
+                                            No
+                                          </button>
+                                        </div>
+                                      </div>
+
+                                      {/* Actions */}
+                                      <div className="mt-8 flex justify-end gap-2">
+                                        <button
+                                          type="button"
+                                          className="inline-flex justify-center rounded-md border border-transparent bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300"
+                                          onClick={() =>
+                                            setIsSettingsOpen(false)
+                                          }
+                                        >
+                                          Cancel
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
+                                          onClick={() =>
+                                            setIsSettingsOpen(false)
+                                          }
+                                        >
+                                          Save
+                                        </button>
+                                      </div>
+                                    </Dialog.Panel>
+                                  </Transition.Child>
+                                </div>
+                              </div>
+                            </Dialog>
+                          </Transition>
+                        </div>
+                      </div>
 
                       <div className="flex items-center justify-between">
                         <span className="text-indigo-700 font-medium">
@@ -289,7 +500,7 @@ export default function WeekQuestions() {
                       )}
                     </div>
                     <button
-                      className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 px-4 ml-2 rounded"
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 px-4 ml-2 rounded hover:cursor-pointer"
                       onClick={async () => {
                         await fetchCourse(quizDifficulty);
                         setStartedQuiz(true);
@@ -342,8 +553,9 @@ export default function WeekQuestions() {
                             isCorrect={answerResults[q.id]}
                             selectedAnswers={userAnswers[q.id]}
                             answer={q.answer}
-                            explanation={q.explanation}
                             isSubmitted={finishedQuiz}
+                            explanation={q.explanation}
+                            showExplanations={showExplanations}
                           />
                         );
                       } else {
@@ -360,8 +572,9 @@ export default function WeekQuestions() {
                             isCorrect={answerResults[q.id]}
                             selectedAnswers={userAnswers[q.id]}
                             answer={q.answer}
-                            explanation={q.explanation}
                             isSubmitted={finishedQuiz}
+                            explanation={q.explanation}
+                            showExplanations={showExplanations}
                           />
                         );
                       }
@@ -379,9 +592,10 @@ export default function WeekQuestions() {
                           }
                           isCorrect={answerResults[q.id]}
                           selectedAnswer={userAnswers[q.id]?.[0]}
-                          isSubmitted={finishedQuiz}
                           answer={q.answer}
+                          isSubmitted={finishedQuiz}
                           explanation={q.explanation}
+                          showExplanations={showExplanations}
                         />
                       );
                     }
@@ -399,7 +613,8 @@ export default function WeekQuestions() {
                           value={userAnswers[q.id] || []}
                           isSubmitted={finishedQuiz}
                           answer={q.answer}
-                          explanation={q.explanation}
+                          explanation={answerExplanations[q.id]}
+                          showExplanations={showExplanations}
                         />
                       );
                     }

@@ -8,6 +8,7 @@ import UploadCourseDialog from "@/src/components/CourseUploadDialog";
 import api from "@/src/lib/axios";
 import { Listbox } from "@headlessui/react";
 import { CheckIcon, ChevronUpDownIcon } from "@heroicons/react/20/solid";
+import LoadingPage from "@/src/components/LoadingPage";
 
 interface Course {
   id: number;
@@ -160,7 +161,7 @@ export default function CoursesPage() {
           )}
 
           {loading ? (
-            <p>Loading...</p>
+            <LoadingPage/>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
               {courses.map((course) => (

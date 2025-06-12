@@ -9,6 +9,7 @@ import { StarIcon, HandThumbUpIcon } from "@heroicons/react/24/solid";
 import api from "@/src/lib/axios";
 import { useRouter } from "next/navigation";
 import UploadWeekDialog from "./WeekUploadDialog";
+import LoadingPage from "./LoadingPage";
 
 interface CourseInfo {
   title: string;
@@ -65,7 +66,12 @@ export default function CoursePage({ slug }: { slug: string }) {
     fetchCourse();
   }, [slug]);
 
-  if (loading) return <div className="p-10">Loading course...</div>;
+  if (loading)
+    return (
+      <div className="p-10">
+        <LoadingPage />
+      </div>
+    );
   if (!course) return <div className="p-10">Course not found.</div>;
 
   // From here on: your original JSX with `course` available
