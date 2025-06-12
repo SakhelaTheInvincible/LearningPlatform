@@ -23,7 +23,8 @@ export default function AdminPage() {
     new_password: "",
     confirm_password: "",
   });
-  const [open, setOpen] = useState(false);
+  const [openRegular, setOpenRegular] = useState(false);
+  const [openAdmin, setOpenAdmin] = useState(false);
 
   const sortOptions = [
     { label: "Username", value: "username" },
@@ -36,6 +37,7 @@ export default function AdminPage() {
     setLoading(true);
     try {
       const res = await api.get("/admin/users/");
+      console.log(res.data)
       setUsers(res.data);
     } catch (err) {
       setError("Failed to load users.");
@@ -84,7 +86,7 @@ export default function AdminPage() {
     setLoading(true);
     try {
       const res = await api.get(
-        `/admin/users/filter/?username=${username}&order_by=${order_by}`
+        `/admin/users/filter/?username=${username}&order_by=-${order_by}`
       );
       setUsers(res.data);
     } catch (err) {
@@ -144,19 +146,38 @@ export default function AdminPage() {
         <div className=""></div>
         <div className="p-10">
           <button
-            onClick={() => setOpen(true)}
+            onClick={() => setOpenRegular(true)}
             className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
           >
             Create a new user
           </button>
 
           <SignupDialog
-            open={open}
-            onClose={() => setOpen(false)}
+            open={openRegular}
+            onClose={() => setOpenRegular(false)}
             onSuccess={() => {
               fetchUsers();
-              setOpen(false);
+              setOpenRegular(false);
             }}
+            is_superuser={false}
+          />
+        </div>
+        <div className="p-10">
+          <button
+            onClick={() => setOpenAdmin(true)}
+            className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+          >
+            Create a new admin User
+          </button>
+
+          <SignupDialog
+            open={openAdmin}
+            onClose={() => setOpenAdmin(false)}
+            onSuccess={() => {
+              fetchUsers();
+              setOpenAdmin(false);
+            }}
+            is_superuser={true}
           />
         </div>
 
@@ -206,19 +227,17 @@ export default function AdminPage() {
                       key={option.value}
                       value={option.value}
                       className={({ active }) =>
-                        `relative cursor-default select-none py-2 pl-4 pr-10 ${
-                          active
-                            ? "bg-indigo-100 text-indigo-900"
-                            : "text-gray-900"
+                        `relative cursor-default select-none py-2 pl-4 pr-10 ${active
+                          ? "bg-indigo-100 text-indigo-900"
+                          : "text-gray-900"
                         }`
                       }
                     >
                       {({ selected }) => (
                         <>
                           <span
-                            className={`block truncate ${
-                              selected ? "font-medium" : "font-normal"
-                            }`}
+                            className={`block truncate ${selected ? "font-medium" : "font-normal"
+                              }`}
                           >
                             {option.label}
                           </span>

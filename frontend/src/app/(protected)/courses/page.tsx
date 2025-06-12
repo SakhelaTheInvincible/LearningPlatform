@@ -57,7 +57,7 @@ export default function CoursesPage() {
     setLoading(true);
     try {
       const res = await api.get(
-        `/courses/filter/?title=${title}&order_by=${order_by}`
+        `/courses/filter/?title=${title}&order_by=-${order_by}`
       );
       setCourses(res.data);
     } catch (err) {
