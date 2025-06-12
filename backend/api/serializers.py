@@ -168,7 +168,7 @@ class QuizListSerializer(serializers.ModelSerializer):
 
 
 class QuizSerializer(serializers.ModelSerializer):
-    questions = QuestionSerializer(many=True, read_only=True)
+    questions = serializers.SerializerMethodField()
     difficulty_display = serializers.SerializerMethodField()
     passing_requirement_display = serializers.SerializerMethodField()
 
@@ -182,6 +182,10 @@ class QuizSerializer(serializers.ModelSerializer):
 
     def get_passing_requirement_display(self, obj):
         return obj.get_passing_requirement_display()
+        
+    def get_questions(self, obj):
+        questions = obj.get_questions()
+        return QuestionSerializer(questions, many=True).data
 
 
 # ====================#

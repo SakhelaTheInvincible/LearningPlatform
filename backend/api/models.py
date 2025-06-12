@@ -3,6 +3,8 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.models import AbstractUser
 from django.db import transaction
 from django.utils.text import slugify
+import random
+from datetime import datetime, timedelta
 
 class User(AbstractUser):
     profile_picture = models.ImageField(
@@ -284,10 +286,6 @@ class Quiz(models.Model):
         default=0,
         validators=[MinValueValidator(0), MaxValueValidator(100)]
     )
-    questions = models.ManyToManyField(
-        Question,
-        related_name='quizzes'
-    )
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -298,6 +296,61 @@ class Quiz(models.Model):
 
     def __str__(self):
         return f"Quiz for Week {self.week.week_number} ({self.get_difficulty_display()}) for {self.week.course}"
+
+    def get_questions(self):
+        """Get questions for this quiz based on difficulty distribution"""
+        # Get all questions for this week
+        week_questions = Question.objects.filter(week=self.week)
+        total_questions = week_questions.count()
+
+        # If we don't have enough questions, return what we have
+        if total_questions < 10:
+            return list(week_questions)
+
+        # Determine how many questions to select (min 10 or 1/3 of total)
+        num_questions = max(10, total_questions // 3)
+        
+        # Get difficulty distribution based on quiz difficulty
+        distribution = self.get_difficulty_distribution()
+        selected_questions = []
+
+        # Use the quiz's ID as a seed for consistent question selection
+        random.seed(self.id)
+
+        for diff_code, percentage in distribution.items():
+            count = max(1, round(num_questions * percentage / 100))
+            questions = list(week_questions.filter(difficulty=diff_code))
+            
+            # If not enough questions of this difficulty, take what's available
+            count = min(count, len(questions))
+            
+            if count > 0:
+                selected = random.sample(questions, count)
+                selected_questions.extend(selected)
+
+        # If we didn't get enough questions, fill with random ones
+        if len(selected_questions) < num_questions:
+            remaining = num_questions - len(selected_questions)
+            remaining_questions = list(set(week_questions) - set(selected_questions))
+            if remaining_questions:
+                selected_questions.extend(
+                    random.sample(remaining_questions, min(remaining, len(remaining_questions)))
+                )
+
+        # Reset the random seed
+        random.seed()
+
+        return selected_questions
+
+    def get_difficulty_distribution(self):
+        distributions = {
+            'N': {'B': 40, 'K': 30, 'I': 15, 'A': 10, 'E': 5},    # Normal
+            'M': {'B': 10, 'K': 40, 'I': 30, 'A': 10, 'E': 5},    # Medium
+            'S': {'B': 10, 'K': 35, 'I': 30, 'A': 15, 'E': 10},    # Standard
+            'I': {'B': 5, 'K': 25, 'I': 30, 'A': 25, 'E': 15},     # Intermediate
+            'A': {'B': 5, 'K': 15, 'I': 30, 'A': 30, 'E': 20},     # Advanced
+        }
+        return distributions.get(self.difficulty, distributions['S'])
 
 
 class Code(models.Model):

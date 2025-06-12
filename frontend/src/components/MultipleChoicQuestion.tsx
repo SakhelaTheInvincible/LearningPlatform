@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 
-interface MultiChoiceProps {
+interface MultipleChoiceQuestionProps {
   question: string;
   options: string[];
   name: string;
@@ -14,6 +14,9 @@ interface MultiChoiceProps {
   onChange: (answer: string[]) => void;
   isCorrect?: "correct" | "incorrect";
   selectedAnswers?: string[];
+  isSubmitted?: boolean;
+  answer: string;
+  explanation?: string;
 }
 
 export default function MultipleChoiceQuestion({
@@ -24,8 +27,13 @@ export default function MultipleChoiceQuestion({
   onChange,
   isCorrect,
   selectedAnswers = [],
-}: MultiChoiceProps) {
+  isSubmitted,
+  answer,
+  explanation,
+}: MultipleChoiceQuestionProps) {
   const [selected, setSelected] = useState<string[]>(selectedAnswers);
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [showExplanation, setShowExplanation] = useState(false);
 
   // Keep selected in sync when selectedAnswers is passed externally,
   // but only update if it actually differs to prevent overwriting local changes.
@@ -88,8 +96,8 @@ export default function MultipleChoiceQuestion({
             >
               <input
                 type="checkbox"
-                name={`${name}-${index}`}
-                value={optionLabel}
+                name={name}
+                value={option}
                 checked={isSelected}
                 onChange={() => handleCheckboxChange(optionLabel)}
                 className="accent-indigo-600"
@@ -100,6 +108,39 @@ export default function MultipleChoiceQuestion({
           );
         })}
       </div>
+      {isSubmitted && (
+        <div className="mt-3 space-y-2">
+          <button
+            onClick={() => setShowAnswer((prev) => !prev)}
+            className="text-sm ml-3 text-indigo-700 underline hover:text-indigo-900"
+          >
+            {showAnswer ? "Hide Answer" : "Show Answer"}
+          </button>
+
+          {showAnswer && answer && (
+            <div className="mt-2 p-3 rounded border border-indigo-500 text-sm text-indigo-800">
+              <strong>Correct Answer:</strong> {answer}
+            </div>
+          )}
+
+          {explanation && (
+            <>
+              <button
+                onClick={() => setShowExplanation((prev) => !prev)}
+                className="text-sm ml-3 text-indigo-700 underline hover:text-indigo-900"
+              >
+                {showExplanation ? "Hide Explanation" : "Show Explanation"}
+              </button>
+
+              {showExplanation && (
+                <div className="mt-2 p-3 rounded border border-indigo-500 text-sm text-indigo-800">
+                  <strong>Explanation:</strong> {explanation}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

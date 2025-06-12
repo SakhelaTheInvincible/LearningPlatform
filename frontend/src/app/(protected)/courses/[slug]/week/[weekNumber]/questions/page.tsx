@@ -143,14 +143,11 @@ export default function WeekQuestions() {
 
         const openResults = await response.data;
         for (const item of openResults) {
-          if (item.is_correct) {
+          if (item.is_correct == "true") {
             correct += 1;
             results[item.id] = "correct";
           } else {
             results[item.id] = "incorrect";
-          }
-          if (item.explanation) {
-            newExplanations[item.id] = item.explanation;
           }
         }
       } catch (error) {
@@ -165,7 +162,6 @@ export default function WeekQuestions() {
     }
     setScore(percentage);
     setAnswerResults(results);
-    setAnswerExplanations((prev) => ({ ...prev, ...newExplanations }));
     console.log(results);
     setLoading(false);
     console.log({ user_score: percentage });
@@ -345,6 +341,9 @@ export default function WeekQuestions() {
                             }
                             isCorrect={answerResults[q.id]}
                             selectedAnswers={userAnswers[q.id]}
+                            answer={q.answer}
+                            explanation={q.explanation}
+                            isSubmitted={finishedQuiz}
                           />
                         );
                       } else {
@@ -360,6 +359,9 @@ export default function WeekQuestions() {
                             }
                             isCorrect={answerResults[q.id]}
                             selectedAnswers={userAnswers[q.id]}
+                            answer={q.answer}
+                            explanation={q.explanation}
+                            isSubmitted={finishedQuiz}
                           />
                         );
                       }
@@ -377,6 +379,9 @@ export default function WeekQuestions() {
                           }
                           isCorrect={answerResults[q.id]}
                           selectedAnswer={userAnswers[q.id]?.[0]}
+                          isSubmitted={finishedQuiz}
+                          answer={q.answer}
+                          explanation={q.explanation}
                         />
                       );
                     }
@@ -394,7 +399,7 @@ export default function WeekQuestions() {
                           value={userAnswers[q.id] || []}
                           isSubmitted={finishedQuiz}
                           answer={q.answer}
-                          explanation={answerExplanations[q.id]}
+                          explanation={q.explanation}
                         />
                       );
                     }

@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 
 interface ChoiceQuestionProps {
   question: string;
@@ -14,6 +14,9 @@ interface ChoiceQuestionProps {
   onChange: (answer: string[]) => void;
   isCorrect?: "correct" | "incorrect";
   selectedAnswers?: string[];
+  isSubmitted?: boolean;
+  answer: string;
+  explanation?: string;
 }
 
 export default function ChoiceQuestion({
@@ -24,7 +27,13 @@ export default function ChoiceQuestion({
   onChange,
   isCorrect,
   selectedAnswers = [],
+  isSubmitted,
+  answer,
+  explanation,
 }: ChoiceQuestionProps) {
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [showExplanation, setShowExplanation] = useState(false);
+
   return (
     <div
       className={`border rounded-lg p-6 shadow-sm ${
@@ -71,6 +80,39 @@ export default function ChoiceQuestion({
           );
         })}
       </div>
+      {isSubmitted && (
+        <div className="mt-3 space-y-2">
+          <button
+            onClick={() => setShowAnswer((prev) => !prev)}
+            className="text-sm ml-3 text-indigo-700 underline hover:text-indigo-900"
+          >
+            {showAnswer ? "Hide Answer" : "Show Answer"}
+          </button>
+
+          {showAnswer && answer && (
+            <div className="mt-2 p-3 rounded border border-indigo-500 text-sm text-indigo-800">
+              <strong>Correct Answer:</strong> {answer}
+            </div>
+          )}
+
+          {explanation && (
+            <>
+              <button
+                onClick={() => setShowExplanation((prev) => !prev)}
+                className="text-sm ml-3 text-indigo-700 underline hover:text-indigo-900"
+              >
+                {showExplanation ? "Hide Explanation" : "Show Explanation"}
+              </button>
+
+              {showExplanation && (
+                <div className="mt-2 p-3 rounded border border-indigo-500 text-sm text-indigo-800">
+                  <strong>Explanation:</strong> {explanation}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

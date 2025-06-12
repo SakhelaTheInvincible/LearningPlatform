@@ -32,7 +32,7 @@ Material:
 """
 
 QUESTION_GEN_TEMPLATE = """
-Generate {num_questions} {difficulty}-level questions about this material (one per line).
+Generate exactly {num_questions} {difficulty}-level questions about this material (one per line).
 
 Format each question as line with | separator:
 QUESTION|ANSWER|EXPLANATION|TYPE|DIFFICULTY
@@ -73,13 +73,7 @@ Rules for comparison:
    - Accept different phrasings that convey the same meaning
    - Be somewhat lenient but ensure core understanding is demonstrated
 
-Please provide your response in JSON format:
-{{
-    "is_correct": true/false,
-    "explanation": "Brief explanation of why the answer is correct or incorrect"
-}}
-
-The response must be valid JSON.
+Please only return true or false, nothing more (all lowercase)
 """
 
 

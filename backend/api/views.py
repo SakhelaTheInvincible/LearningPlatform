@@ -28,6 +28,7 @@ from django.db.models import Q
 
 from rest_framework import mixins, viewsets
 from django.db import transaction
+from concurrent.futures import ThreadPoolExecutor
 
 
 # USER SECTION
@@ -442,58 +443,43 @@ class QuizViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.Gen
 
         return quizzes
 
+    @action(detail=False, methods=['post'], url_path='create_quizzes')
+    def create_quizzes(self, request, *args, **kwargs):
+        user = request.user
+        queryset = Course.objects.all()
+        title_slug = self.kwargs['title_slug']
+        week_number = self.kwargs['week_number']
+        course = get_object_or_404(queryset, title_slug=title_slug)
 
-    def get_questions(self, week, difficulty):
-        # Get all questions for this week
-        week_questions = Question.objects.filter(week=week)
-        total_questions = week_questions.count()
+        if course.user != user:
+            return Response({'detail': 'Not allowed to add weeks to this course.'}, status=status.HTTP_403_FORBIDDEN)
+        
+        # get the correct week
+        queryset = Week.objects.all()
+        week = get_object_or_404(
+            queryset, course=course, week_number=week_number)
+        try:
+            with transaction.atomic():
+                quizzes = []
+                for difficulty in ['N', 'M', 'S', 'I', 'A']:
+                    data = {
+                        'week': week.pk,
+                        'difficulty': difficulty,
+                        'passing_requirement': difficulty
+                    }
+                    serializer = self.get_serializer(data=data)
+                    serializer.is_valid(raise_exception=True)
+                    quiz = serializer.save()
+                    quizzes.append(quiz)
 
-        # Determine how many questions to select (min 10 or 1/3 of total)
-        num_questions = max(10, total_questions // 3)
+                return Response({
+                    'message': f'Successfully created {len(quizzes)} quizzes',
+                    'quizzes': [{'id': q.id, 'difficulty': q.difficulty} for q in quizzes]
+                }, status=status.HTTP_201_CREATED)
 
-        # Get difficulty distribution based on quiz difficulty
-        distribution = self.get_difficulty_distribution(difficulty)
-
-        selected_questions = []
-
-        for diff_code, percentage in distribution.items():
-            count = max(1, round(num_questions * percentage / 100))
-            questions = list(week_questions.filter(difficulty=diff_code))
-
-            # If not enough questions of this difficulty, take what's available
-            count = min(count, len(questions))
-
-            if count > 0:
-                selected = random.sample(questions, count)
-                selected_questions.extend(selected)
-
-        # If we didn't get enough questions, fill with random ones
-        if len(selected_questions) < num_questions:
-            remaining = num_questions - len(selected_questions)
-            remaining_questions = list(
-                set(week_questions) - set(selected_questions))
-            if remaining_questions:
-                selected_questions.extend(
-                    random.sample(remaining_questions, min(
-                        remaining, len(remaining_questions)))
-                )
-
-        return selected_questions
-
-    def get_difficulty_distribution(self, difficulty):
-
-        distributions = {
-            'N': {'B': 40, 'K': 30, 'I': 15, 'A': 10, 'E': 5},    # Normal
-            'M': {'B': 10, 'K': 40, 'I': 30, 'A': 10, 'E': 5},    # Medium
-            'S': {'B': 10, 'K': 35, 'I': 30, 'A': 15, 'E': 10},    # Standard
-            'I': {'B': 5, 'K': 25, 'I': 30, 'A': 25, 'E': 15},     # Intermediate
-            'A': {'B': 5, 'K': 15, 'I': 30, 'A': 30, 'E': 20},     # Advanced
-        }
-        # Default to Standard
-        return distributions.get(difficulty, distributions['S'])
-
-    def evaluate_open_question(self, answer: str, user_answer: str):
-        return compare_open_answers(answer, user_answer)
+        except Exception as e:
+            return Response(
+                {'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['put'], url_path='set_user_score')
     def set_user_score(self, request, *args, **kwargs):
@@ -523,71 +509,28 @@ class QuizViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.Gen
 
     @action(detail=False, methods=['post'], url_path='evaluate_open_questions')
     def evaluate_open_questions(self, request, *args, **kwargs):
-
         items = request.data
         if not isinstance(items, list):
             return Response({
                 'error': 'Request body must be an array'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        results = []
-        for item in items:
+        def process_item(item):
             id = item['id']
             user_answer = item['user_answer']
             answer = item['answer']
-            result = {}
-            result['id'] = id
-            result.update(self.evaluate_open_question(answer, user_answer))
-            print(item)
-            print(result)
-            results.append(result)
+            result = {'id': id}
+            result.update(compare_open_answers(answer, user_answer))
+            return result
+
+        # Calculate optimal number of workers
+        cpu_count = os.cpu_count() or 4  # fallback to 4 if cpu_count returns None
+        max_workers = min(32, (2 * cpu_count) + 1)  # cap at 32 to prevent resource exhaustion
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            results = list(executor.map(process_item, items))
 
         return Response(results, status=status.HTTP_200_OK)
-
-    @action(detail=False, methods=['post'], url_path='create_quizzes')
-    def create_quizzes(self, request, *args, **kwargs):
-        user = request.user
-        queryset = Course.objects.all()
-        title_slug = self.kwargs['title_slug']
-        week_number = self.kwargs['week_number']
-        course = get_object_or_404(queryset, title_slug=title_slug)
-
-        if course.user != user:
-            return Response({'detail': 'Not allowed to add weeks to this course.'}, status=status.HTTP_403_FORBIDDEN)
-        # get the correct week
-        queryset = Week.objects.all()
-        week = get_object_or_404(
-            queryset, course=course, week_number=week_number)
-        try:
-            with transaction.atomic():
-                quizzes = []
-                for difficulty in ['N', 'M', 'S', 'I', 'A']:
-
-                    data = {
-                        'week': week.pk,
-                        'difficulty': difficulty,
-                        'passing_requirement': difficulty
-                    }
-                    serializer = self.get_serializer(data=data)
-                    serializer.is_valid(raise_exception=True)
-                    quiz = serializer.save()
-
-                    questions = self.get_questions(
-                        week=week, difficulty=difficulty)
-
-                    if questions:
-                        quiz.questions.set(questions)
-
-                    quizzes.append(quiz)
-
-                return Response({
-                    'message': f'Successfully created {len(quizzes)} quizzes',
-                    'quizzes': [{'id': q.id, 'difficulty': q.difficulty} for q in quizzes]
-                }, status=status.HTTP_201_CREATED)
-
-        except Exception as e:
-            return Response(
-                {'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 # ====================#

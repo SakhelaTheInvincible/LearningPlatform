@@ -79,7 +79,7 @@ def parse_question_lines(response_text):
 
 def generate_questions_for_chunk(chunk, difficulty, client):
     word_count = len(chunk.split())
-    questions_per_level = max(2, min(12, (word_count // 1000) * 2))
+    questions_per_level = max(2, min(12, (word_count // 1000) * 3))
     
     prompt = QUESTION_GEN_TEMPLATE.format(
         num_questions=questions_per_level,
@@ -152,7 +152,6 @@ def generate_questions_for_week(week: Week) -> dict:
 
 
 def compare_open_answers(answer: str, user_answer: str) -> dict:
-    """Compare open question answers."""
     client = get_ai_client()
 
     # Convert user_answer to string if it's a list
@@ -169,20 +168,14 @@ def compare_open_answers(answer: str, user_answer: str) -> dict:
             model="deepseek-chat",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
-            response_format={"type": "json_object"}
         )
-        result = json.loads(response.choices[0].message.content)
+        result = {'is_correct': response.choices[0].message.content}
         return result
 
-    # {
-    #     "is_correct": true/false,
-    #     "explanation": "Brief explanation of why the answer is correct or incorrect"
-    # }
     except Exception as e:
         print(f"Error in open answer comparison: {str(e)}")
         result = {
-            'is_correct': user_answer.lower().strip() == answer.lower().strip(),
-            'explanation': ""
+            'is_correct': user_answer.lower().strip() == answer.lower().strip()
         }
         return result
 

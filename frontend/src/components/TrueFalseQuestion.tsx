@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 
 interface TrueFalseQuestionProps {
   question: string;
@@ -13,6 +13,9 @@ interface TrueFalseQuestionProps {
   onChange: (answer: string[]) => void;
   isCorrect?: "correct" | "incorrect";
   selectedAnswer?: string;
+  isSubmitted?: boolean;
+  answer: string;
+  explanation?: string;
 }
 
 export default function TrueFalseQuestion({
@@ -22,7 +25,13 @@ export default function TrueFalseQuestion({
   onChange,
   isCorrect,
   selectedAnswer,
+  isSubmitted,
+  answer,
+  explanation,
 }: TrueFalseQuestionProps) {
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [showExplanation, setShowExplanation] = useState(false);
+
   const handleChange = (value: string) => {
     if (isCorrect !== undefined) return; // prevent changes after grading
     onChange([value]);
@@ -75,6 +84,39 @@ export default function TrueFalseQuestion({
           </label>
         ))}
       </div>
+      {isSubmitted && (
+        <div className="mt-3 space-y-2">
+          <button
+            onClick={() => setShowAnswer((prev) => !prev)}
+            className="text-sm ml-3 text-indigo-700 underline hover:text-indigo-900"
+          >
+            {showAnswer ? "Hide Answer" : "Show Answer"}
+          </button>
+
+          {showAnswer && answer && (
+            <div className="mt-2 p-3 rounded border border-indigo-500 text-sm text-indigo-800">
+              <strong>Correct Answer:</strong> {answer}
+            </div>
+          )}
+
+          {explanation && (
+            <>
+              <button
+                onClick={() => setShowExplanation((prev) => !prev)}
+                className="text-sm ml-3 text-indigo-700 underline hover:text-indigo-900"
+              >
+                {showExplanation ? "Hide Explanation" : "Show Explanation"}
+              </button>
+
+              {showExplanation && (
+                <div className="mt-2 p-3 rounded border border-indigo-500 text-sm text-indigo-800">
+                  <strong>Explanation:</strong> {explanation}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

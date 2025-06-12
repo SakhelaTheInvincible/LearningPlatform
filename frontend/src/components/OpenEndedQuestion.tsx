@@ -28,6 +28,7 @@ export default function OpenEndedQuestion({
   explanation,
 }: OpenEndedProps) {
   const [showAnswer, setShowAnswer] = useState(false);
+  const [showExplanation, setShowExplanation] = useState(false);
   return (
     <div
       className={`border rounded-lg p-6 shadow-sm ${
@@ -52,13 +53,8 @@ export default function OpenEndedQuestion({
         onChange={(e) => onChange([e.target.value])}
         readOnly={isSubmitted}
       ></textarea>
-      {isSubmitted && explanation && (
-        <div className="mt-3 p-3 rounded text-blue-800">
-          <strong>Explanation:</strong> {explanation}
-        </div>
-      )}
       {isSubmitted && (
-        <div className="mt-3">
+        <div className="mt-3 space-y-2">
           <button
             onClick={() => setShowAnswer((prev) => !prev)}
             className="text-sm ml-3 text-indigo-700 underline hover:text-indigo-900"
@@ -70,6 +66,23 @@ export default function OpenEndedQuestion({
             <div className="mt-2 p-3 rounded border border-indigo-500 text-sm text-indigo-800">
               <strong>Correct Answer:</strong> {answer}
             </div>
+          )}
+
+          {showAnswer && explanation && (
+            <>
+              <button
+                onClick={() => setShowExplanation((prev) => !prev)}
+                className="text-sm ml-3 text-indigo-700 underline hover:text-indigo-900"
+              >
+                {showExplanation ? "Hide Explanation" : "Show Explanation"}
+              </button>
+
+              {showExplanation && (
+                <div className="mt-2 p-3 rounded border border-indigo-500 text-sm text-indigo-800">
+                  <strong>Explanation:</strong> {explanation}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
