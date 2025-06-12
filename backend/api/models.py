@@ -314,8 +314,8 @@ class Quiz(models.Model):
         distribution = self.get_difficulty_distribution()
         selected_questions = []
 
-        # Use the quiz's ID as a seed for consistent question selection
-        random.seed(self.id)
+        # Use a combination of quiz ID and current timestamp for better randomization
+        random.seed(self.id + int(datetime.now().timestamp()))
 
         for diff_code, percentage in distribution.items():
             count = max(1, round(num_questions * percentage / 100))
@@ -336,6 +336,9 @@ class Quiz(models.Model):
                 selected_questions.extend(
                     random.sample(remaining_questions, min(remaining, len(remaining_questions)))
                 )
+
+        # Shuffle the final list of questions
+        random.shuffle(selected_questions)
 
         # Reset the random seed
         random.seed()

@@ -51,6 +51,7 @@ Requirements:
 8. Each question should be seperated by line
 9. Please be flexible with the question types (do not just generate open questions)
 10. Also, do not include "**" or some characters like Q:, or 1: or etc.. just question text
+11. Question Types must be exactly as they are: Beginner|Base Knowledge|Intermediate|Advanced|Expert
 
 example output:
 What is the capital of France?|Paris|Paris is the capital of France|open|Beginner

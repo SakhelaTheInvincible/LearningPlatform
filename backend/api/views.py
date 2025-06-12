@@ -521,6 +521,7 @@ class QuizViewSet(mixins.RetrieveModelMixin,
         serializer_map = {
             'create_quizzes': QuizCreateSerializer,
             'list': QuizListSerializer,
+            'retrieve': QuizSerializer,
         }
         return serializer_map.get(self.action, QuizSerializer)
 
@@ -529,15 +530,16 @@ class QuizViewSet(mixins.RetrieveModelMixin,
         title_slug = self.kwargs['title_slug']
         week_number = self.kwargs['week_number']
         difficulty = self.kwargs[self.lookup_field]
-        queryset = Quiz.objects.prefetch_related(
-            'questions').select_related(
+        queryset = Quiz.objects.select_related(
             'week',
             'week__course',
-            'week__course__user').filter(
+            'week__course__user'
+        ).filter(
             difficulty=difficulty,
             week__week_number=week_number,
             week__course__title_slug=title_slug,
-            week__course__user=user)
+            week__course__user=user
+        )
 
         obj = get_object_or_404(queryset)
         self.check_object_permissions(self.request, obj)
@@ -547,14 +549,25 @@ class QuizViewSet(mixins.RetrieveModelMixin,
         user = self.request.user
         title_slug = self.kwargs['title_slug']
         week_number = self.kwargs['week_number']
-        queryset = Quiz.objects.select_related('week',
-                                               'week__course',
-                                               'week__course__user').filter(
+        queryset = Quiz.objects.select_related(
+            'week',
+            'week__course',
+            'week__course__user'
+        ).filter(
             week__week_number=week_number,
             week__course__title_slug=title_slug,
             week__course__user=user
         )
         return queryset
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # Get questions for this quiz using the model's method
+        questions = instance.get_questions()
+        serializer = self.get_serializer(instance)
+        data = serializer.data
+        data['questions'] = QuestionSerializer(questions, many=True).data
+        return Response(data)
 
     @action(detail=False, methods=['post'], url_path='create_quizzes')
     def create_quizzes(self, request, *args, **kwargs):
@@ -584,13 +597,6 @@ class QuizViewSet(mixins.RetrieveModelMixin,
                     serializer = self.get_serializer(data=data)
                     serializer.is_valid(raise_exception=True)
                     quiz = serializer.save()
-
-                    questions = self.get_questions(
-                        week=week, difficulty=difficulty)
-
-                    if questions:
-                        quiz.questions.set(questions)
-
                     quizzes.append(quiz)
 
                 return Response({

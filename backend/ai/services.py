@@ -15,6 +15,7 @@ import textwrap
 import os
 from concurrent.futures import ThreadPoolExecutor
 import torch
+import random
 
 # Check CUDA availability and set device
 if torch.cuda.is_available():
@@ -81,9 +82,12 @@ def generate_questions_for_chunk(chunk, difficulty, client):
     word_count = len(chunk.split())
     questions_per_level = max(2, min(12, (word_count // 1000) * 3))
     
+    # Map the difficulty to the correct format for the prompt
+    mapped_difficulty = DIFFICULTY_MAPPING.get(difficulty, difficulty)
+    
     prompt = QUESTION_GEN_TEMPLATE.format(
         num_questions=questions_per_level,
-        difficulty=difficulty,
+        difficulty=mapped_difficulty,
         chunk=chunk,
         question_types=", ".join(QUESTION_TYPE_CHOICES)
     )
@@ -94,10 +98,14 @@ def generate_questions_for_chunk(chunk, difficulty, client):
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7
         )
-        return parse_question_lines(response.choices[0].message.content)
+        questions = parse_question_lines(response.choices[0].message.content)
+        # Ensure the difficulty is set correctly in the returned questions
+        for q in questions:
+            q['difficulty'] = difficulty
+        return questions
     except Exception as e:
         print(f"Error generating {difficulty} questions: {str(e)}")
-        # Return fallback questions
+        # Return fallback questions with correct difficulty
         return [{
             "question": f"Sample {difficulty} question about this section",
             "answer": f"Sample {difficulty} answer",
@@ -114,16 +122,16 @@ def generate_questions_for_week(week: Week) -> dict:
     except Material.DoesNotExist:
         raise ValueError(f"No material found for week {week.week_number}")
 
-    client = get_ai_client()  # Your client initialization function
+    client = get_ai_client()
     raw_questions = []
     
     summarized_material = material.summarized_material
     chunks = textwrap.wrap(summarized_material, width=MAX_CHUNK_SIZE)
 
-    # Process chunks in parallel
     with ThreadPoolExecutor(max_workers=16) as executor:
         futures = []
         for chunk, difficulty in product(chunks, DIFFICULTIES):
+            print(f"Generating {difficulty} questions")
             futures.append(
                 executor.submit(
                     generate_questions_for_chunk,
@@ -135,6 +143,7 @@ def generate_questions_for_week(week: Week) -> dict:
 
         for future in futures:
             raw_questions.extend(future.result())
+
     # Format for output
     questions_data = [
         {
