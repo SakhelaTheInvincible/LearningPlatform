@@ -7,7 +7,7 @@ QUESTION_TYPE_CHOICES = ["open", "choice", "multiple_choice", "true_false"]
 CODE_DIFFICULTIES = ["Easy", "Medium", "Hard"]
 
 QUESTIONS_PER_LEVEL = 2
-MAX_CHUNK_SIZE = 32000
+MAX_CHUNK_SIZE = 4000
 
 DISTRIBUTIONS = {
           'B': {'true_false': 40, 'choice': 30, 'multiple_choice': 20, 'open': 10},
@@ -32,7 +32,8 @@ Material:
 """
 
 QUESTION_GEN_TEMPLATE = """
-Generate exactly {num_questions} {difficulty}-level questions about this material (one per line).
+Generate exactly {num_questions} number of questions about this material for each difficulty level: {difficulties}. 
+so if num_questions is 2, for each difficulty level, generate 2 questions. (precisely)
 
 Format each question as line with | separator:
 QUESTION|ANSWER|EXPLANATION|TYPE|DIFFICULTY
@@ -47,11 +48,13 @@ Requirements:
 4. For choice questions: Format as "Q: What is X? a) A b) B c) C" with answer "a"
 5. For multiple_choice: Same as choice but answer like "a,c"
 6. For true_false: Answer must be "True" or "False"
-7. Keep original difficulty labels exactly, and question type exactly
+7. The 'DIFFICULTY' field must be one of: {difficulties}
 8. Each question should be seperated by line
 9. Please be flexible with the question types (do not just generate open questions)
-10. Also, do not include "**" or some characters like Q:, or 1: or etc.. just question text
-11. Question Types must be exactly as they are: Beginner|Base Knowledge|Intermediate|Advanced|Expert
+10. Also, do not include "**" or some characters like Q:, or 1: or etc.. or question type (for examle "True or False:" before the question), just text
+Please, pay good attention to the step 10 (others too).
+11. Generate unique questions. Do not repeat questions across different difficulty levels.
+12. Do not include questions which cannot be answered with the given material. Also in formulas don't forget ending, for example O(n) must include brackets
 
 example output:
 What is the capital of France?|Paris|Paris is the capital of France|open|Beginner

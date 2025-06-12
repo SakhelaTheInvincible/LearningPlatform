@@ -78,16 +78,13 @@ def parse_question_lines(response_text):
     
     return questions
 
-def generate_questions_for_chunk(chunk, difficulty, client):
+def generate_questions_for_chunk(chunk, client):
     word_count = len(chunk.split())
-    questions_per_level = max(2, min(12, (word_count // 1000) * 3))
-    
-    # Map the difficulty to the correct format for the prompt
-    mapped_difficulty = DIFFICULTY_MAPPING.get(difficulty, difficulty)
+    questions_per_level = max(2, min(12, (word_count * 2) // 1000))
     
     prompt = QUESTION_GEN_TEMPLATE.format(
         num_questions=questions_per_level,
-        difficulty=mapped_difficulty,
+        difficulties=", ".join(DIFFICULTIES),
         chunk=chunk,
         question_types=", ".join(QUESTION_TYPE_CHOICES)
     )
@@ -99,20 +96,20 @@ def generate_questions_for_chunk(chunk, difficulty, client):
             temperature=0.7
         )
         questions = parse_question_lines(response.choices[0].message.content)
-        # Ensure the difficulty is set correctly in the returned questions
-        for q in questions:
-            q['difficulty'] = difficulty
         return questions
     except Exception as e:
-        print(f"Error generating {difficulty} questions: {str(e)}")
-        # Return fallback questions with correct difficulty
-        return [{
-            "question": f"Sample {difficulty} question about this section",
-            "answer": f"Sample {difficulty} answer",
-            "explanation": f"Sample {difficulty} explanation",
-            "type": "multiple_choice",
-            "difficulty": difficulty
-        } for _ in range(questions_per_level)]
+        print(f"Error generating questions: {str(e)}")
+        fallback_questions = []
+        for difficulty in DIFFICULTIES:
+            for _ in range(questions_per_level):
+                fallback_questions.append({
+                    "question": f"Sample {difficulty} question about this section",
+                    "answer": f"Sample {difficulty} answer",
+                    "explanation": f"Sample {difficulty} explanation",
+                    "type": "multiple_choice",
+                    "difficulty": difficulty
+                })
+        return fallback_questions
 
 def generate_questions_for_week(week: Week) -> dict:
     try:
@@ -130,13 +127,11 @@ def generate_questions_for_week(week: Week) -> dict:
 
     with ThreadPoolExecutor(max_workers=16) as executor:
         futures = []
-        for chunk, difficulty in product(chunks, DIFFICULTIES):
-            print(f"Generating {difficulty} questions")
+        for chunk in chunks:
             futures.append(
                 executor.submit(
                     generate_questions_for_chunk,
                     chunk=chunk,
-                    difficulty=difficulty,
                     client=client
                 )
             )
