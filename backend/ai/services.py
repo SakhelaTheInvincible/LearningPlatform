@@ -3,8 +3,8 @@ from api.models import Course, Question, Week, Material, Code
 from .client import get_ai_client
 from .constants import (
     QUESTION_GEN_TEMPLATE, MAX_CHUNK_SIZE, QUESTION_TYPE_CHOICES, 
-    DIFFICULTIES, QUESTIONS_PER_LEVEL, SUMMARY_TEMPLATE, 
-    DIFFICULTY_MAPPING, ANSWER_COMPARISON_TEMPLATE, DISTRIBUTIONS, CHECK_LANGUAGE_TEMPLATE, CODE_COMPARISON_TEMPLATE,
+    DIFFICULTIES,
+    DIFFICULTY_MAPPING, ANSWER_COMPARISON_TEMPLATE, CODE_COMPARISON_TEMPLATE,
     CODE_DIFFICULTIES, CODE_GENERATION_TEMPLATE
 )
 from itertools import product
@@ -184,12 +184,13 @@ def compare_open_answers(answer: str, user_answer: str) -> dict:
         return result
 
 
-def compare_coding_answers(answer: str, user_answer: str) -> dict:
+def compare_coding_answers(answer: str, user_answer: str, programming_language: str = "python") -> dict:
     """Compare coding question answers."""
     client = get_ai_client()
     prompt = CODE_COMPARISON_TEMPLATE.format(
-        answer=answer,
-        user_answer=user_answer
+        correct_answer=answer,
+        user_answer=user_answer,
+        programming_language=programming_language
     )
 
     try:
@@ -197,39 +198,87 @@ def compare_coding_answers(answer: str, user_answer: str) -> dict:
             model="deepseek-chat",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
-            response_format={"type": "json_object"}
         )
-        result = json.loads(response.choices[0].message.content)
+        result = response.choices[0].message.content
         return {
-            'user_score': result['user_score'],
-            'error': result['error']
+            'user_score': result
         }
         
     except Exception as e:
         print(f"Error in coding answer comparison: {str(e)}")
         # Fallback to basic string comparison if AI fails
         return {
-            'user_score': 0,
-            'error': "logic error in this line ..."
+            'user_score': 0
         }
 
+def parse_code_lines(response_text):
+    codes = []
+    challenge_blocks = response_text.strip().split('==============')
+    
+    for block in challenge_blocks:
+        block = block.strip()
+        if not block:
+            continue
 
-def check_language(course_title: str) -> str:
-    client = get_ai_client()
-    prompt = CHECK_LANGUAGE_TEMPLATE.format(course_name=course_title)
+        try:
+            problem_statement_marker = "Problem Statement:"
+            solution_marker = "Solution:"
+            template_marker = "Template:"
+            difficulty_marker = "Difficulty:"
+
+            p_start = block.find(problem_statement_marker)
+            s_start = block.find(solution_marker)
+            t_start = block.find(template_marker)
+            d_start = block.find(difficulty_marker)
+
+            if not all(x != -1 for x in [p_start, s_start, t_start, d_start]):
+                print(f"Skipping malformed block: {block}")
+                continue
+
+            problem_statement = block[p_start + len(problem_statement_marker):s_start].strip()
+            solution = block[s_start + len(solution_marker):t_start].strip()
+            template_code = block[t_start + len(template_marker):d_start].strip()
+            difficulty = block[d_start + len(difficulty_marker):].strip()
+
+            if not all([problem_statement, solution, template_code, difficulty]):
+                print(f"Skipping block with empty fields: {block}")
+                continue
+
+            codes.append({
+                "problem_statement": problem_statement,
+                "solution": solution,
+                "template_code": template_code,
+                "difficulty": difficulty,
+            })
+
+        except Exception as e:
+            print(f"Error parsing block: {block}\\nError: {str(e)}")
+            continue
+            
+    return codes
+
+def generate_codes_for_chunk(chunk, client, language):
+    word_count = len(chunk.split())
+    codes_per_level = max(1, min(2, (word_count // 1000)))
+
+    prompt = CODE_GENERATION_TEMPLATE.format(
+        num_codes=codes_per_level,
+        difficulties=", ".join(CODE_DIFFICULTIES),
+        chunk=chunk,
+        programming_language=language,
+    )
+
     try:
         response = client.chat.completions.create(
             model="deepseek-chat",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            response_format={"type": "json_object"}
+            temperature=0.7,
         )
-        language = json.loads(response.choices[0].message.content)
-        return language
+        codes = parse_code_lines(response.choices[0].message.content)
+        return codes
     except Exception as e:
-        print(f"Error in language check: {str(e)}")
-        return "None"
-        
+        print(f"Error generating codes for chunk: {str(e)}")
+        return []
 
 
 def generate_coding_problems_for_week(week: Week) -> dict:
@@ -241,46 +290,30 @@ def generate_coding_problems_for_week(week: Week) -> dict:
         raise ValueError(f"No material found for week {week.week_number}")
 
     client = get_ai_client()
-    raw_codes = []
     
     summarized_material = material.summarized_material
     chunks = textwrap.wrap(summarized_material, width=MAX_CHUNK_SIZE)
     language = week.course.language
 
-    for chunk_index, chunk in enumerate(chunks):
-        word_count = len(chunk.split())
+    all_raw_codes = []
+    with ThreadPoolExecutor(max_workers=16) as executor:
+        futures = [
+            executor.submit(generate_codes_for_chunk, chunk, client, language)
+            for chunk in chunks
+        ]
+        for future in futures:
+            all_raw_codes.extend(future.result())
 
-        # Dynamic code count scaling (approx. 3 codes per 1000 words)
-        codes_per_level = max(1, min(5, (word_count // 1000)))
+    # Filter and limit codes per difficulty
+    MAX_PER_DIFFICULTY = 5
+    final_codes_by_difficulty = {diff: [] for diff in CODE_DIFFICULTIES}
+    
+    for code in all_raw_codes:
+        difficulty = code.get("difficulty")
+        if difficulty in final_codes_by_difficulty and len(final_codes_by_difficulty[difficulty]) < MAX_PER_DIFFICULTY:
+            final_codes_by_difficulty[difficulty].append(code)
 
-        for difficulty in CODE_DIFFICULTIES:
-            prompt = CODE_GENERATION_TEMPLATE.format(
-                num_codes=codes_per_level,
-                difficulty=difficulty,
-                chunk=chunk,
-                programming_language=language
-            )
-
-            try:
-                response = client.chat.completions.create(
-                    model="deepseek-chat",
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.7,
-                    response_format={"type": "json_object"}
-                )
-                result = json.loads(response.choices[0].message.content)
-                raw_codes.extend(result['codes'])
-
-            except Exception as e:
-                print(f"[Chunk {chunk_index}] Error generating {difficulty} codes: {str(e)}")
-
-                for _ in range(codes_per_level):
-                    raw_codes.append({
-                        "problem_statement": f"Sample {difficulty} statement about this section",
-                        "solution": f"Sample {difficulty} solution",
-                        "template_code": f"Sample {difficulty} template",
-                        "difficulty": "E"
-                    })
+    raw_codes = [code for codes in final_codes_by_difficulty.values() for code in codes]
 
     # Cleanup existing questions
     Code.objects.filter(week=week).delete()
@@ -289,26 +322,22 @@ def generate_coding_problems_for_week(week: Week) -> dict:
     codes_to_create = [
         Code(
             week=week,
-            difficulty=q['difficulty'][0],
-            problem_statement=q['problem_statement'],
-            solution=q['solution'],
-            template_code=q['template_code'],
+            difficulty=q.get('difficulty', 'E')[0],  # Default to Easy if missing
+            problem_statement=q.get('problem_statement', ''),
+            solution=q.get('solution', ''),
+            template_code=q.get('template_code', ''),
         ) for q in raw_codes
     ]
 
     created_codes = Code.objects.bulk_create(codes_to_create)
 
     # Final distribution report
-    difficulty_counts = {d: 0 for d in CODE_DIFFICULTIES}
-    for q in raw_codes:
-        difficulty_counts[q['difficulty']] += 1
+    difficulty_counts = {d: len(final_codes_by_difficulty[d]) for d in CODE_DIFFICULTIES}
 
     return {
         "week_id": week.id,
         "course": week.course.title,
         "total_codes": len(created_codes),
         "chunks_processed": len(chunks),
-        "questions_per_chunk": codes_per_level,
         "difficulty_distribution": difficulty_counts,
-        "average_codes_per_level": len(created_codes) // len(CODE_DIFFICULTIES)
     }

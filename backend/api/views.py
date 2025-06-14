@@ -2,7 +2,7 @@ from rest_framework.decorators import api_view, APIView, action
 from rest_framework.response import Response
 from rest_framework import status
 import random
-from ai.services import generate_material_summary, generate_questions_for_week, compare_open_answers, check_language, generate_coding_problems_for_week
+from ai.services import generate_material_summary, generate_questions_for_week, compare_open_answers, generate_coding_problems_for_week
 from api.models import Course, Week, Question, Material, User, Quiz, Code
 from api.serializers import CourseSerializer, QuestionSerializer, QuizSerializer, WeekSerializer
 from file_manager.file_manager import extract_text, process_material_file

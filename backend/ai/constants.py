@@ -80,23 +80,11 @@ Rules for comparison:
 Please only return true or false, nothing more (all lowercase)
 """
 
-
-CHECK_LANGUAGE_TEMPLATE = """
-Check if the course is about some programming language, if it is, return the language name, if not return "None".
-For example: if sentence is "Fundamentals of Python" return "Python", 
-but if course name is: Data structure and algorithms, nothing more, then "None".
-but if it has Data structures with Python, again language will be python
-
-
-Course name: {course_name}
-respond only with:
-language name / None
-"""
-
 CODE_COMPARISON_TEMPLATE = """
 Compare a user's code with the correct code and determine if they are logically equivalent.
 
 Context:
+- Programming language: {programming_language}
 - Correct code: {correct_answer}
 - User's code: {user_answer}
 
@@ -105,74 +93,56 @@ Rules for comparison:
    - Accept different variable names if logic is identical
    - Consider alternative valid implementations
    - Focus on algorithmic correctness and output
-   - Be strict about syntax and logic errors
    
 Be lenient with language/formatting but strict with core concepts and logic
 
-Determine if the answers are equivalent and respond with Format as JSON with:
-user_score, error
-
 Hints:
 user score is between 0-100 on how does it similar logic to the real solution, 
-but be strict to syntax (if it is error, 0 + "syntax error in this line ...")
-
-error must be like above "syntax error", or just some hint like "logic error in this line ...",
-or if everything is correct, then return "none"
 
 
 OUTPUT FORMAT:
-{{
-  "user_score: "...",
-  "error": "..."
-}}
+   return only user score (number between 0-100), nothing else (strictly nothing else)
 """
 
-
-
 CODE_GENERATION_TEMPLATE = """
-Generate {num_codes} {difficulty}-level coding problems in {programming_language} about this material.
+Generate {num_codes} coding challenges for each of these difficulty levels: {difficulties}.
+The challenges should be based on the following material and programming language: {programming_language}.
+Focus on practical applications of the concepts.
 
-Requirements:
-1. Problems should test both syntax knowledge and problem-solving ability
-2. Format as JSON with: problem_statement, solution, template_code, difficulty
-3. Word limits:
-   - Problem statement: 30-50 words
-   - Solution: actual code implementation
-4. Difficulty must be output as it is: Easy|Medium|Hard
-5. Template code requirements:
-   - Use class/functions with clear "TODO" markers
-   - Include all necessary imports
-   - Provide clear entry points for implementation
-6. Solution must:
-   - Use the same structure as template code
-   - Be properly formatted and executable
-7. Balance problems by difficulty
+For each challenge, provide the following, with each field on a new line:
+1. Problem Statement: [The problem description]
+2. Solution: [The full solution code]
+3. Template: [The boilerplate code for the user]
+4. Difficulty: [One of: {difficulties}]
 
-Material Excerpt:
+Separate each complete challenge block with a line containing only '=============='.
+
+Material:
 {chunk}
 
-OUTPUT FORMAT:
-{{
-  "codes": [
-    {{
-      "problem_statement": "...",
-      "solution": "...",
-      "template_code": "...",
-      "difficulty": "..."
-    }}
-  ],
-  "continuation_marker": "..."
-}}
-
-Example Template for Python:
-class Solution:
-    #Implement the function below according to the problem statement
-    def function_to_implement(self, args):
-        # TODO: Implement this function
-        pass
-
-Example Solution:
-class Solution:
-    def function_to_implement(self, a, b):
-        return a ** b
+Example format:
+Problem Statement: Write a function to add two numbers.
+Solution: 
+   def add(a, b):
+      return a + b
+Template: 
+Solution: 
+   # function to implement
+   def add(a, b):
+      # todo
+      raise NotImplementedError("Not implemented")
+  
+Difficulty: Easy
+==============
+Problem Statement: Write a function to subtract two numbers.
+Solution: 
+   def sub(a, b):
+      return a - b
+Template:
+Solution: 
+   # function to implement
+   def sub(a, b):
+      # todo
+      raise NotImplementedError("Not implemented")
+Difficulty: Easy
 """
