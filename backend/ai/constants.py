@@ -10,12 +10,12 @@ QUESTIONS_PER_LEVEL = 2
 MAX_CHUNK_SIZE = 4000
 
 DISTRIBUTIONS = {
-          'B': {'true_false': 40, 'choice': 30, 'multiple_choice': 20, 'open': 10},
-          'K': {'true_false': 30, 'choice': 35, 'multiple_choice': 25, 'open': 10},
-          'I': {'true_false': 20, 'choice': 30, 'multiple_choice': 35, 'open': 15},
-          'A': {'true_false': 20, 'choice': 20, 'multiple_choice': 30, 'open': 30},
-          'E': {'true_false': 10, 'choice': 10, 'multiple_choice': 40, 'open': 40},
-      }
+   'Beginner': {'true_false': 40, 'choice': 30, 'multiple_choice': 20, 'open': 10},
+   'Base Knowledge': {'true_false': 30, 'choice': 35, 'multiple_choice': 25, 'open': 10},
+   'Intermediate': {'true_false': 20, 'choice': 30, 'multiple_choice': 35, 'open': 15},
+   'Advanced': {'true_false': 20, 'choice': 20, 'multiple_choice': 30, 'open': 30},
+   'Expert': {'true_false': 10, 'choice': 10, 'multiple_choice': 40, 'open': 40},
+}
 
 # Prompt Templates
 SUMMARY_TEMPLATE = """
@@ -55,6 +55,7 @@ Requirements:
 Please, pay good attention to the step 10 (others too).
 11. Generate unique questions. Do not repeat questions across different difficulty levels.
 12. Do not include questions which cannot be answered with the given material. Also in formulas don't forget ending, for example O(n) must include brackets
+13. For each difficulty, use distributions of question types as in percentages distribution: {distributions}
 
 example output:
 What is the capital of France?|Paris|Paris is the capital of France|open|Beginner
@@ -88,23 +89,28 @@ Context:
 - Expected: {correct_answer}
 - User's: {user_answer}
 
-Scoring Criteria:
-1. Core Logic (40 points)
-   - Algorithm correctness
-   - Edge case handling
-   - Time/space complexity
+Rules for comparison:
+   - Ignore whitespace and formatting differencesAdd commentMore actions
+   - Accept different variable names if logic is identical
+   - Consider alternative valid implementations
+   - Focus on algorithmic correctness and output
+   
+Be lenient with language/formatting but strict with core concepts and logic
 
-2. Implementation (30 points)
-   - Code structure
-   - Variable naming
-   - Error handling
+Hints:
+user score is between 0-100 on how does it similar logic to the real solution, 
 
-3. Output (30 points)
-   - Correct results
-   - Expected behavior
-   - Format compliance
 
-Return only the score (0-100), nothing else.
+OUTPUT FORMAT:
+   return only user score (number between 0-100), and hint (string) seperated by |
+
+
+Example Output
+0|Syntax Error
+0|Runtime Error
+100|Good
+90|Almost correct, needs improvement in edge cases (minimum, maximum, etc....).... (line ....)
+50|Correct logic, but has mistakes (hint: pay attention to line ...)
 """
 
 CODE_GENERATION_TEMPLATE = """
@@ -130,14 +136,16 @@ Material Context:
 Example:
 Problem Statement: Implement a function to validate email addresses
 Solution:
-def validate_email(email):
-    import re
-    pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
-    return bool(re.match(pattern, email))
+Class Solution:
+   def validate_email(self, email):
+      import re
+      pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+      return bool(re.match(pattern, email))
 Template:
-def validate_email(email):
-    # TODO: Implement email validation
-    pass
+Class Solution:
+   def validate_email(self, email):
+      # TODO: Implement email validation
+      pass
 Difficulty: Easy
 ==============
 """
@@ -164,7 +172,7 @@ Extract:
    - Edge cases
 
 Keep summary focused and actionable.
-Target length: 30-40% of original.
+Target length: 20-30% of original.
 
 Material:
 {chunk}

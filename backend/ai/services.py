@@ -5,7 +5,7 @@ from .constants import (
     QUESTION_GEN_TEMPLATE, MAX_CHUNK_SIZE, QUESTION_TYPE_CHOICES,
     DIFFICULTIES,
     DIFFICULTY_MAPPING, ANSWER_COMPARISON_TEMPLATE, CODE_COMPARISON_TEMPLATE,
-    CODE_DIFFICULTIES, CODE_GENERATION_TEMPLATE, CODE_SUMMARY_TEMPLATE
+    CODE_DIFFICULTIES, CODE_GENERATION_TEMPLATE, CODE_SUMMARY_TEMPLATE, DISTRIBUTIONS
 )
 from itertools import product
 from transformers import pipeline, AutoTokenizer
@@ -16,23 +16,26 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 import torch
 import random
+import platform
 
 # Check CUDA availability and set device
-# if torch.cuda.is_available():
-#     device = 0  # Use first GPU
-#     print(f"Using GPU: {torch.cuda.get_device_name(0)}")
-# else:
-#     device = -1  # Use CPU
-#     print("CUDA not available, using CPU")
+system = platform.system()
+if system == 'Darwin':  # macOS
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    if torch.backends.mps.is_available():
+        device = "mps"
+        print("Using MPS (Metal Performance Shaders)")
+    else:
+        device = -1  # Use CPU
+        print("MPS not available, using CPU")
+else:  # Windows or other OS
+    if torch.cuda.is_available():
+        device = 0  # Use first GPU
+        print(f"Using GPU: {torch.cuda.get_device_name(0)}")
+    else:
+        device = -1  # Use CPU
+        print("CUDA not available, using CPU")
 
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-if torch.backends.mps.is_available():
-    device = torch.device("mps")
-    print("Using MPS (Metal Performance Shaders)")
-else:
-    device = torch.device("cpu")
-    print("Using CPU")
 
 
 def _summarize_chunk(chunk: str, summarizer) -> str:
@@ -126,7 +129,8 @@ def generate_questions_for_chunk(chunk, client):
         num_questions=questions_per_level,
         difficulties=", ".join(DIFFICULTIES),
         chunk=chunk,
-        question_types=", ".join(QUESTION_TYPE_CHOICES)
+        question_types=", ".join(QUESTION_TYPE_CHOICES),
+        distributions=DISTRIBUTIONS
     )
 
     try:
@@ -240,16 +244,18 @@ def compare_coding_answers(answer: str, user_answer: str, programming_language: 
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
         )
-        result = response.choices[0].message.content
+        result = response.choices[0].message.content.split("|")
         return {
-            'user_score': result
+            'user_score': result[0],
+            'hint': result[1]
         }
 
     except Exception as e:
         print(f"Error in coding answer comparison: {str(e)}")
         # Fallback to basic string comparison if AI fails
         return {
-            'user_score': 0
+            'user_score': 0,
+            'hint': str(e)
         }
 
 
@@ -338,21 +344,53 @@ def parse_code_lines(response_text):
     return codes
 
 
-def generate_code_specific_summary(material: str, client, language: str) -> str:
-    """Generate a focused summary for code generation."""
+def _summarize_code_chunk(chunk: str, client, language: str) -> str:
+    """Generate a focused summary for a single code chunk."""
     try:
         response = client.chat.completions.create(
             model="deepseek-chat",
             messages=[{
                 "role": "user",
                 "content": CODE_SUMMARY_TEMPLATE.format(
-                    chunk=material,
+                    chunk=chunk,
                     language=language
                 )
             }],
             temperature=0.4,
         )
         return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"Error in code chunk summary generation: {str(e)}")
+        # Return original chunk if summarization fails
+        return chunk
+
+
+def generate_code_specific_summary(material: str, client, language: str) -> str:
+    """Generate a focused summary for code generation using chunking and threading."""
+    try:
+        print("Starting code-specific summary generation...")
+        chunks = textwrap.wrap(material, width=MAX_CHUNK_SIZE)
+        print(f"Material split into {len(chunks)} chunks for code summary.")
+
+        full_summary = []
+        max_workers = 16
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(
+                _summarize_code_chunk, chunk, client, language) for chunk in chunks]
+
+            for i, future in enumerate(futures):
+                try:
+                    result = future.result()
+                    full_summary.append(result)
+                    print(f"Processed code summary chunk {i+1}/{len(chunks)}")
+                except Exception as e:
+                    print(f"Error processing code summary chunk {i+1}: {str(e)}")
+                    full_summary.append(chunks[i])
+
+        print("All code summary chunks processed successfully.")
+        return "\n\n".join(full_summary)
+
     except Exception as e:
         print(f"Error in code summary generation: {str(e)}")
         return material
@@ -375,8 +413,20 @@ def generate_coding_problems_for_week(week: Week) -> dict:
         language
     )
 
+    # Dynamically set problems per difficulty based on summary length
+    word_count = len(code_summary.split())
+    if word_count < 500:
+        problems_per_difficulty = 1
+    elif word_count < 1000:
+        problems_per_difficulty = 2
+    elif word_count < 2000:
+        problems_per_difficulty = 3
+    elif word_count < 3000:
+        problems_per_difficulty = 4
+    else:
+        problems_per_difficulty = 5
+
     # Generate problems with balanced distribution
-    problems_per_difficulty = 4  # 4 problems per difficulty level
     prompt = CODE_GENERATION_TEMPLATE.format(
         num_codes=problems_per_difficulty,
         difficulties=", ".join(CODE_DIFFICULTIES),
