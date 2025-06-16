@@ -103,31 +103,46 @@ def process_material_file(file):
         ValueError: If file processing fails
     """
     try:
+        print("Starting file processing in file_manager...")
         # Save file temporarily
+        print(f"Saving temporary file: {file.name}")
         file_path = default_storage.save(
             f'temp_{file.name}', ContentFile(file.read()))
         full_file_path = os.path.join(settings.MEDIA_ROOT, file_path)
+        print(f"File saved to: {full_file_path}")
 
         try:
             # Extract text from file
+            print("Extracting text from file...")
             material = extract_text(full_file_path)
             if not material:
                 raise ValueError('Could not extract text from file')
+            print(f"Text extracted successfully. Length: {len(material)}")
 
             # Generate summary
             try:
+                print("Generating summary...")
                 summarized_material = generate_material_summary(
                     material=material)
+                print(
+                    f"Summary generated successfully. Length: {len(summarized_material)}")
             except Exception as e:
+                print(f"Error generating summary: {str(e)}")
                 # Fallback summary if AI generation fails
+                print("Using fallback summary...")
                 summarized_material = material[:500] + "..."
+                print(
+                    f"Fallback summary created. Length: {len(summarized_material)}")
 
             return material, summarized_material
 
         finally:
             # Clean up temp file
+            print("Cleaning up temporary file...")
             if os.path.exists(full_file_path):
                 os.remove(full_file_path)
+                print("Temporary file removed")
 
     except Exception as e:
+        print(f"Error in process_material_file: {str(e)}")
         raise ValueError(f'Error processing file: {str(e)}')

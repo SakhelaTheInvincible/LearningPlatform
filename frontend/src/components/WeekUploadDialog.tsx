@@ -23,7 +23,9 @@ export default function UploadWeekDialog({
   const [materialTitle, setMaterialTitle] = useState("");
   const [materialDescription, setMaterialDescription] = useState("");
   const [uploadedWeeks, setUploadedWeeks] = useState<Set<number>>(new Set());
-
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [isCodeGeneration, setIsCodeGeneration] = useState(false);
 
   const openMaterialUpload = (weekNumber: number) => {
     setSelectedWeek(weekNumber);
@@ -37,15 +39,27 @@ export default function UploadWeekDialog({
     formData.append("week_number", `${selectedWeek}`);
 
     try {
-      await api.post(`/courses/${slug}/weeks/`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      // First try to get the week to check if it exists
+      try {
+        await api.get(`/courses/${slug}/weeks/${selectedWeek}/`);
+        // Week exists, update it
+        await api.put(`/courses/${slug}/weeks/${selectedWeek}/`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      } catch (err) {
+      // Week doesn't exist, create it
+        await api.post(`/courses/${slug}/weeks/`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
     } catch (err) {
       console.error("Error uploading material:", err);
     }
   };
 
   const handleMaterialUpload = async () => {
+    setError("");
+    setSuccess("");
     if (!material || selectedWeek === null) return;
 
     const formData = new FormData();
@@ -68,13 +82,33 @@ export default function UploadWeekDialog({
         `/courses/${slug}/weeks/${selectedWeek}/quizzes/create_quizzes/`,
       );
 
+      if (isCodeGeneration) {
+        try {
+          const response = await api.post(`/courses/${slug}/weeks/${selectedWeek}/codes/create_coding_problems/`, {});
+          const { problems, distribution } = response.data;
+
+          console.log(`Generated ${problems.length} coding problems`);
+          console.log('Difficulty distribution:', distribution);
+
+          setSuccess(`Successfully generated ${problems.length} coding problems`);
+        } catch (codeErr: any) {
+          const errorMessage = codeErr?.response?.data?.error ||
+            codeErr?.response?.data?.detail ||
+            "Error generating coding problems";
+          setError(errorMessage);
+          return;
+        }
+      }
+
       setMaterialDialogOpen(false);
       setMaterial(null);
       setMaterialTitle("");
       setMaterialDescription("");
+      setIsCodeGeneration(false);
       setUploadedWeeks((prev) => new Set(prev).add(selectedWeek));
-    } catch (err) {
-      console.error("Error uploading material:", err);
+      setSuccess("Material uploaded successfully.");
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || "Error uploading material.");
     }
   };
 
@@ -196,6 +230,18 @@ export default function UploadWeekDialog({
                     onChange={(e) => setMaterialDescription(e.target.value)}
                   />
 
+                  <div className="mt-4 mb-4">
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={isCodeGeneration}
+                        onChange={(e) => setIsCodeGeneration(e.target.checked)}
+                        className="rounded border-gray-300"
+                      />
+                      <span>Is this material good for code generation?</span>
+                    </label>
+                  </div>
+
                   <label
                     htmlFor="material-upload"
                     className="cursor-pointer inline-block text-indigo-600 hover:underline"
@@ -216,6 +262,8 @@ export default function UploadWeekDialog({
                     </p>
                   )}
                   <div className="mt-6">
+                    {error && <div className="text-red-600 text-sm mb-2">{error}</div>}
+                    {success && <div className="text-green-600 text-sm mb-2">{success}</div>}
                     <button
                       onClick={async () => {
                         await handleWeekUpload();

@@ -2,10 +2,10 @@ import json
 from api.models import Course, Question, Week, Material, Code
 from .client import get_ai_client
 from .constants import (
-    QUESTION_GEN_TEMPLATE, MAX_CHUNK_SIZE, QUESTION_TYPE_CHOICES, 
+    QUESTION_GEN_TEMPLATE, MAX_CHUNK_SIZE, QUESTION_TYPE_CHOICES,
     DIFFICULTIES,
     DIFFICULTY_MAPPING, ANSWER_COMPARISON_TEMPLATE, CODE_COMPARISON_TEMPLATE,
-    CODE_DIFFICULTIES, CODE_GENERATION_TEMPLATE
+    CODE_DIFFICULTIES, CODE_GENERATION_TEMPLATE, CODE_SUMMARY_TEMPLATE
 )
 from itertools import product
 from transformers import pipeline, AutoTokenizer
@@ -18,12 +18,22 @@ import torch
 import random
 
 # Check CUDA availability and set device
-if torch.cuda.is_available():
-    device = 0  # Use first GPU
-    print(f"Using GPU: {torch.cuda.get_device_name(0)}")
+# if torch.cuda.is_available():
+#     device = 0  # Use first GPU
+#     print(f"Using GPU: {torch.cuda.get_device_name(0)}")
+# else:
+#     device = -1  # Use CPU
+#     print("CUDA not available, using CPU")
+
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+if torch.backends.mps.is_available():
+    device = torch.device("mps")
+    print("Using MPS (Metal Performance Shaders)")
 else:
-    device = -1  # Use CPU
-    print("CUDA not available, using CPU")
+    device = torch.device("cpu")
+    print("Using CPU")
+
 
 def _summarize_chunk(chunk: str, summarizer) -> str:
     input_length = len(chunk.split())
@@ -44,16 +54,45 @@ def _summarize_chunk(chunk: str, summarizer) -> str:
         print(f"Error summarizing chunk: {str(e)}")
         return chunk
 
+
 def generate_material_summary(material: str) -> str:
+    print("Starting material summary generation...")
     chunks = textwrap.wrap(material, width=1024)
-    summarizer = pipeline("summarization", model="facebook/bart-large-cnn", device=device)
-    
-    with ThreadPoolExecutor(max_workers=6) as executor:
-        futures = [executor.submit(_summarize_chunk, chunk, summarizer) for chunk in chunks]
-        full_summary = [future.result() for future in futures]
+    print(f"Material split into {len(chunks)} chunks")
 
-    return "\n\n".join(full_summary)
+    try:
+        print("Loading summarization model...")
+        summarizer = pipeline(
+            "summarization", model="facebook/bart-large-cnn", device=device)
+        print("Model loaded successfully")
 
+        # Reduce number of workers for CPU
+        max_workers = 2 if device == -1 else 6
+        print(f"Using {max_workers} workers for processing")
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            print("Starting parallel processing of chunks...")
+            futures = [executor.submit(
+                _summarize_chunk, chunk, summarizer) for chunk in chunks]
+            full_summary = []
+
+            for i, future in enumerate(futures):
+                try:
+                    result = future.result()
+                    full_summary.append(result)
+                    print(f"Processed chunk {i+1}/{len(chunks)}")
+                except Exception as e:
+                    print(f"Error processing chunk {i+1}: {str(e)}")
+                    # Use original chunk if summarization fails
+                    full_summary.append(chunks[i])
+
+        print("All chunks processed successfully")
+        return "\n\n".join(full_summary)
+
+    except Exception as e:
+        print(f"Error in summary generation: {str(e)}")
+        # Return first 500 characters as fallback
+        return material[:500] + "..."
 
 
 def parse_question_lines(response_text):
@@ -62,7 +101,7 @@ def parse_question_lines(response_text):
         line = line.strip()
         if not line or line.count('|') != 4:
             continue
-        
+
         try:
             question, answer, explanation, q_type, difficulty = line.split('|')
             questions.append({
@@ -75,13 +114,14 @@ def parse_question_lines(response_text):
         except Exception as e:
             print(f"Error parsing line: {line}\nError: {str(e)}")
             continue
-    
+
     return questions
+
 
 def generate_questions_for_chunk(chunk, client):
     word_count = len(chunk.split())
     questions_per_level = max(2, min(12, (word_count * 2) // 1000))
-    
+
     prompt = QUESTION_GEN_TEMPLATE.format(
         num_questions=questions_per_level,
         difficulties=", ".join(DIFFICULTIES),
@@ -111,6 +151,7 @@ def generate_questions_for_chunk(chunk, client):
                 })
         return fallback_questions
 
+
 def generate_questions_for_week(week: Week) -> dict:
     try:
         material = week.materials.first()
@@ -121,7 +162,7 @@ def generate_questions_for_week(week: Week) -> dict:
 
     client = get_ai_client()
     raw_questions = []
-    
+
     summarized_material = material.summarized_material
     chunks = textwrap.wrap(summarized_material, width=MAX_CHUNK_SIZE)
 
@@ -151,7 +192,7 @@ def generate_questions_for_week(week: Week) -> dict:
         }
         for q in raw_questions
     ]
-    
+
     return questions_data
 
 
@@ -203,7 +244,7 @@ def compare_coding_answers(answer: str, user_answer: str, programming_language: 
         return {
             'user_score': result
         }
-        
+
     except Exception as e:
         print(f"Error in coding answer comparison: {str(e)}")
         # Fallback to basic string comparison if AI fails
@@ -211,60 +252,135 @@ def compare_coding_answers(answer: str, user_answer: str, programming_language: 
             'user_score': 0
         }
 
+
 def parse_code_lines(response_text):
     codes = []
-    challenge_blocks = response_text.strip().split('==============')
-    
+    challenge_blocks = response_text.strip().split('---')
+
     for block in challenge_blocks:
         block = block.strip()
         if not block:
             continue
 
         try:
-            problem_statement_marker = "Problem Statement:"
-            solution_marker = "Solution:"
-            template_marker = "Template:"
-            difficulty_marker = "Difficulty:"
+            print(block)
+            # Extract sections using markers
+            problem_statement = ""
+            solution = ""
+            template_code = ""
+            difficulty = ""
 
-            p_start = block.find(problem_statement_marker)
-            s_start = block.find(solution_marker)
-            t_start = block.find(template_marker)
-            d_start = block.find(difficulty_marker)
+            # Find problem statement
+            if "Problem Statement" in block:
+                problem_start = block.find("Problem Statement")
+                problem_end = block.find(
+                    "Solution") if "Solution" in block else len(block)
+                problem_statement = block[problem_start:problem_end].replace(
+                    "Problem Statement:", "").strip()
 
-            if not all(x != -1 for x in [p_start, s_start, t_start, d_start]):
-                print(f"Skipping malformed block: {block}")
-                continue
+            # Find solution
+            if "Solution" in block:
+                solution_start = block.find("Solution")
+                solution_end = block.find(
+                    "Template") if "Template" in block else len(block)
+                solution = block[solution_start:solution_end].replace(
+                    "Solution:", "").strip()
+                # Extract code from solution
+                if "```" in solution:
+                    code_start = solution.find("```") + 3
+                    code_end = solution.rfind("```")
+                    solution = solution[code_start:code_end].strip()
 
-            problem_statement = block[p_start + len(problem_statement_marker):s_start].strip()
-            solution = block[s_start + len(solution_marker):t_start].strip()
-            template_code = block[t_start + len(template_marker):d_start].strip()
-            difficulty = block[d_start + len(difficulty_marker):].strip()
+            # Find template
+            if "Template" in block:
+                template_start = block.find("Template")
+                template_end = block.find(
+                    "Difficulty") if "Difficulty" in block else len(block)
+                template_code = block[template_start:template_end].replace(
+                    "Template:", "").strip()
+                # Extract code from template
+                if "```" in template_code:
+                    code_start = template_code.find("```") + 3
+                    code_end = template_code.rfind("```")
+                    template_code = template_code[code_start:code_end].strip()
 
+            # Find difficulty
+            if "Difficulty" in block:
+                difficulty_start = block.find("Difficulty")
+                difficulty = block[difficulty_start:].replace(
+                    "Difficulty:", "").strip()
+
+            # Validate required fields
             if not all([problem_statement, solution, template_code, difficulty]):
-                print(f"Skipping block with empty fields: {block}")
+                print(f"Skipping block with missing fields: {block}")
                 continue
+
+            # Map difficulty to our format
+            difficulty_map = {
+                "Easy": "E",
+                "Medium": "M",
+                "Hard": "H"
+            }
+            # Default to Medium if not found
+            difficulty = difficulty_map.get(difficulty, "M")
 
             codes.append({
+                "difficulty": difficulty,
                 "problem_statement": problem_statement,
                 "solution": solution,
-                "template_code": template_code,
-                "difficulty": difficulty,
+                "template_code": template_code
             })
 
         except Exception as e:
-            print(f"Error parsing block: {block}\\nError: {str(e)}")
+            print(f"Error parsing block: {block}\nError: {str(e)}")
             continue
-            
+
     return codes
 
-def generate_codes_for_chunk(chunk, client, language):
-    word_count = len(chunk.split())
-    codes_per_level = max(1, min(2, (word_count // 1000)))
 
+def generate_code_specific_summary(material: str, client, language: str) -> str:
+    """Generate a focused summary for code generation."""
+    try:
+        response = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[{
+                "role": "user",
+                "content": CODE_SUMMARY_TEMPLATE.format(
+                    chunk=material,
+                    language=language
+                )
+            }],
+            temperature=0.4,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"Error in code summary generation: {str(e)}")
+        return material
+
+
+def generate_coding_problems_for_week(week: Week) -> dict:
+    """Generate balanced set of coding problems for a week."""
+    # Validate input
+    material = week.materials.first()
+    if not material or not material.summarized_material:
+        raise ValueError("Material summary required")
+
+    client = get_ai_client()
+    language = week.course.language
+
+    # Generate focused summary
+    code_summary = generate_code_specific_summary(
+        material.summarized_material,
+        client,
+        language
+    )
+
+    # Generate problems with balanced distribution
+    problems_per_difficulty = 4  # 4 problems per difficulty level
     prompt = CODE_GENERATION_TEMPLATE.format(
-        num_codes=codes_per_level,
+        num_codes=problems_per_difficulty,
         difficulties=", ".join(CODE_DIFFICULTIES),
-        chunk=chunk,
+        chunk=code_summary,
         programming_language=language,
     )
 
@@ -275,69 +391,25 @@ def generate_codes_for_chunk(chunk, client, language):
             temperature=0.7,
         )
         codes = parse_code_lines(response.choices[0].message.content)
-        return codes
+
+        # Validate generated codes
+        if not codes:
+            raise ValueError("No valid coding problems generated")
+
+        # Ensure balanced distribution
+        difficulty_counts = {diff: 0 for diff in CODE_DIFFICULTIES}
+        for code in codes:
+            difficulty_counts[code['difficulty']] += 1
+
+        if not all(count == problems_per_difficulty for count in difficulty_counts.values()):
+            print("Warning: Uneven difficulty distribution in generated problems")
+
+        return {
+            "week": week.pk,
+            "codes": codes,
+            "distribution": difficulty_counts
+        }
+
     except Exception as e:
-        print(f"Error generating codes for chunk: {str(e)}")
-        return []
-
-
-def generate_coding_problems_for_week(week: Week) -> dict:
-    try:
-        material = week.materials.first()
-        if not material or not material.summarized_material:
-            raise ValueError("Material summary not generated yet")
-    except Material.DoesNotExist:
-        raise ValueError(f"No material found for week {week.week_number}")
-
-    client = get_ai_client()
-    
-    summarized_material = material.summarized_material
-    chunks = textwrap.wrap(summarized_material, width=MAX_CHUNK_SIZE)
-    language = week.course.language
-
-    all_raw_codes = []
-    with ThreadPoolExecutor(max_workers=16) as executor:
-        futures = [
-            executor.submit(generate_codes_for_chunk, chunk, client, language)
-            for chunk in chunks
-        ]
-        for future in futures:
-            all_raw_codes.extend(future.result())
-
-    # Filter and limit codes per difficulty
-    MAX_PER_DIFFICULTY = 5
-    final_codes_by_difficulty = {diff: [] for diff in CODE_DIFFICULTIES}
-    
-    for code in all_raw_codes:
-        difficulty = code.get("difficulty")
-        if difficulty in final_codes_by_difficulty and len(final_codes_by_difficulty[difficulty]) < MAX_PER_DIFFICULTY:
-            final_codes_by_difficulty[difficulty].append(code)
-
-    raw_codes = [code for codes in final_codes_by_difficulty.values() for code in codes]
-
-    # Cleanup existing questions
-    Code.objects.filter(week=week).delete()
-
-    # Create new questions
-    codes_to_create = [
-        Code(
-            week=week,
-            difficulty=q.get('difficulty', 'E')[0],  # Default to Easy if missing
-            problem_statement=q.get('problem_statement', ''),
-            solution=q.get('solution', ''),
-            template_code=q.get('template_code', ''),
-        ) for q in raw_codes
-    ]
-
-    created_codes = Code.objects.bulk_create(codes_to_create)
-
-    # Final distribution report
-    difficulty_counts = {d: len(final_codes_by_difficulty[d]) for d in CODE_DIFFICULTIES}
-
-    return {
-        "week_id": week.id,
-        "course": week.course.title,
-        "total_codes": len(created_codes),
-        "chunks_processed": len(chunks),
-        "difficulty_distribution": difficulty_counts,
-    }
+        print(f"Error in problem generation: {str(e)}")
+        raise

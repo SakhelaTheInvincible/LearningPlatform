@@ -21,11 +21,16 @@ export default function UploadCourseDialog({
   const [description, setDescription] = useState("");
   const [duration, setDuration] = useState(1);
   const [image, setImage] = useState<File | null>(null);
+  const [isProgrammingCourse, setIsProgrammingCourse] = useState(false);
+  const [programmingLanguage, setProgrammingLanguage] = useState("");
   const [material, setMaterial] = useState<File | null>(null);
   const [materialTitle, setMaterialTitle] = useState("");
   const [materialDescription, setMaterialDescription] = useState("");
+  const [isCodeGeneration, setIsCodeGeneration] = useState(false);
   const [uploadedWeeks, setUploadedWeeks] = useState<Set<number>>(new Set());
   const [slug, setSlug] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const handleCourseUpload = async () => {
     const formData = new FormData();
@@ -33,7 +38,12 @@ export default function UploadCourseDialog({
     formData.append("duration_weeks", duration.toString());
     formData.append("description", description);
     if (image) formData.append("image", image);
+    if (isProgrammingCourse) {
+      formData.append("language", programmingLanguage);
+    }
 
+    setError("");
+    setSuccess("");
     try {
       const res = await api.post("/courses/", formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -41,8 +51,9 @@ export default function UploadCourseDialog({
       setWeeks(duration);
       setWeeksDialogOpen(true);
       setSlug(res.data.title_slug);
-    } catch (err) {
-      console.error("Error uploading course:", err);
+      setSuccess("Course uploaded successfully.");
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || "Error uploading course.");
     }
   };
 
@@ -52,6 +63,8 @@ export default function UploadCourseDialog({
   };
 
   const handleWeekUpload = async () => {
+    setError("");
+    setSuccess("");
     if (!material || selectedWeek === null) return;
 
     const formData = new FormData();
@@ -67,13 +80,14 @@ export default function UploadCourseDialog({
   };
 
   const handleMaterialUpload = async () => {
+    setError("");
+    setSuccess("");
     if (!material || selectedWeek === null) return;
 
     const formData = new FormData();
     formData.append("material", material);
     formData.append("title", materialTitle);
     formData.append("description", materialDescription);
-
     try {
       await api.post(
         `/courses/${slug}/weeks/${selectedWeek}/materials/`,
@@ -90,13 +104,33 @@ export default function UploadCourseDialog({
         `/courses/${slug}/weeks/${selectedWeek}/quizzes/create_quizzes/`,
       );
 
+      if (isCodeGeneration) {
+        try {
+          const response = await api.post(`/courses/${slug}/weeks/${selectedWeek}/codes/create_coding_problems/`, {});
+          const { problems, distribution } = response.data;
+
+          console.log(`Generated ${problems.length} coding problems`);
+          console.log('Difficulty distribution:', distribution);
+
+          setSuccess(`Successfully generated ${problems.length} coding problems`);
+        } catch (codeErr: any) {
+          const errorMessage = codeErr?.response?.data?.error ||
+            codeErr?.response?.data?.detail ||
+            "Error generating coding problems";
+          setError(errorMessage);
+          return;
+        }
+      }
+
       setMaterialDialogOpen(false);
       setMaterial(null);
       setMaterialTitle("");
       setMaterialDescription("");
+      setIsCodeGeneration(false);
       setUploadedWeeks((prev) => new Set(prev).add(selectedWeek));
-    } catch (err) {
-      console.error("Error uploading material:", err);
+      setSuccess("Material uploaded successfully.");
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || "Error uploading material.");
     }
   };
 
@@ -106,8 +140,12 @@ export default function UploadCourseDialog({
     setWeeks(0);
     setDuration(1);
     setImage(null);
+    setIsProgrammingCourse(false);
+    setProgrammingLanguage("");
     setUploadedWeeks(new Set());
     setWeeksDialogOpen(false);
+    setError("");
+    setSuccess("");
     onClose();
   };
 
@@ -145,6 +183,8 @@ export default function UploadCourseDialog({
                   </Dialog.Title>
 
                   <div className="mt-4 space-y-4">
+                    {error && <div className="text-red-600 text-sm">{error}</div>}
+                    {success && <div className="text-green-600 text-sm">{success}</div>}
                     <input
                       type="text"
                       placeholder="Course Title"
@@ -184,6 +224,26 @@ export default function UploadCourseDialog({
                         <p className="mt-2 text-sm text-gray-600">
                           Selected: {image.name}
                         </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="flex items-center space-x-2 mb-2">
+                        <input
+                          type="checkbox"
+                          checked={isProgrammingCourse}
+                          onChange={(e) => setIsProgrammingCourse(e.target.checked)}
+                          className="rounded border-gray-300"
+                        />
+                        <span>Is this course about a programming language?</span>
+                      </label>
+                      {isProgrammingCourse && (
+                        <input
+                          type="text"
+                          placeholder="Specify programming language (e.g., Python, JavaScript)"
+                          className="w-full mb-2 rounded border px-3 py-2"
+                          value={programmingLanguage}
+                          onChange={(e) => setProgrammingLanguage(e.target.value)}
+                        />
                       )}
                     </div>
                     <button
@@ -236,6 +296,8 @@ export default function UploadCourseDialog({
                   </Dialog.Title>
 
                   <div className="mt-4 space-y-2">
+                    {error && <div className="text-red-600 text-sm">{error}</div>}
+                    {success && <div className="text-green-600 text-sm">{success}</div>}
                     {Array.from({ length: weeks }).map((_, index) => (
                       <div
                         key={index}
@@ -311,6 +373,18 @@ export default function UploadCourseDialog({
                     onChange={(e) => setMaterialDescription(e.target.value)}
                   />
 
+                  <div className="mt-4 mb-4">
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={isCodeGeneration}
+                        onChange={(e) => setIsCodeGeneration(e.target.checked)}
+                        className="rounded border-gray-300"
+                      />
+                      <span>Is this material good for code generation?</span>
+                    </label>
+                  </div>
+
                   <label
                     htmlFor="material-upload"
                     className="cursor-pointer inline-block text-indigo-600 hover:underline"
@@ -331,6 +405,8 @@ export default function UploadCourseDialog({
                     </p>
                   )}
                   <div className="mt-6">
+                    {error && <div className="text-red-600 text-sm mb-2">{error}</div>}
+                    {success && <div className="text-green-600 text-sm mb-2">{success}</div>}
                     <button
                       onClick={async () => {
                         await handleWeekUpload();

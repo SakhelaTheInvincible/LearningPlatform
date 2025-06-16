@@ -144,7 +144,6 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
 # Quiz Section
 # ====================#
 
-
 class QuizCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Quiz
@@ -165,7 +164,6 @@ class QuizListSerializer(serializers.ModelSerializer):
 
     def get_passing_requirement_display(self, obj):
         return obj.get_passing_requirement_display()
-
 
 class QuizSerializer(serializers.ModelSerializer):
     questions = serializers.SerializerMethodField()
@@ -193,21 +191,46 @@ class CodeCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Code
         fields = [
-            'week',
             'difficulty',
             'problem_statement',
             'solution',
             'template_code'
         ]
 
-    def create(self, validated_data):
-        return Code.objects.create(**validated_data)
 
+class CodeListSerializer(serializers.ModelSerializer):
+    difficulty_display = serializers.SerializerMethodField()
 
-class CodeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Code
-        fields = ['id', 'difficulty', 'user_score', 'created_at', 'problem_statement', 'template_code']
+        fields = [
+            'id',
+            'difficulty_display',
+            'problem_statement',
+            'solution',
+            'template_code',
+            'user_score',
+        ]
+
+    def get_difficulty_display(self, obj):
+        return obj.get_difficulty_display()
+
+class CodeSerializer(serializers.ModelSerializer):
+    difficulty_display = serializers.SerializerMethodField()
+    class Meta:
+        model = Code
+        fields = [
+            'id',
+            'difficulty_display',
+            'problem_statement',
+            'solution',
+            'template_code',
+            'user_score'
+        ]
+
+    def get_difficulty_display(self, obj):
+        return obj.get_difficulty_display()
+
 
 
 # Week Section
@@ -268,7 +291,7 @@ class CourseCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = ['title', 'title_slug', 'duration_weeks',
-                  'description', 'user', 'image']
+                  'description', 'user', 'image', 'language']
 
 
 class CourseListSerializer(serializers.ModelSerializer):

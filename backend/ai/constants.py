@@ -4,7 +4,7 @@ DIFFICULTY_LEVEL = {"B": "Beginner", "K": "Base Knowledge", "I": "Intermediate",
 DIFFICULTY_MAPPING = {'Beginner': 'B', 'Base Knowledge': 'K', 'Intermediate': 'I',
                     'Advanced': 'A', 'Expert': 'E'}
 QUESTION_TYPE_CHOICES = ["open", "choice", "multiple_choice", "true_false"]
-CODE_DIFFICULTIES = ["Easy", "Medium", "Hard"]
+CODE_DIFFICULTIES = ["E", "M", "H"]  # Easy, Medium, Hard
 
 QUESTIONS_PER_LEVEL = 2
 MAX_CHUNK_SIZE = 4000
@@ -81,68 +81,91 @@ Please only return true or false, nothing more (all lowercase)
 """
 
 CODE_COMPARISON_TEMPLATE = """
-Compare a user's code with the correct code and determine if they are logically equivalent.
+Compare code solutions and return a score (0-100).
 
 Context:
-- Programming language: {programming_language}
-- Correct code: {correct_answer}
-- User's code: {user_answer}
+- Language: {programming_language}
+- Expected: {correct_answer}
+- User's: {user_answer}
 
-Rules for comparison:
-   - Ignore whitespace and formatting differences
-   - Accept different variable names if logic is identical
-   - Consider alternative valid implementations
-   - Focus on algorithmic correctness and output
-   
-Be lenient with language/formatting but strict with core concepts and logic
+Scoring Criteria:
+1. Core Logic (40 points)
+   - Algorithm correctness
+   - Edge case handling
+   - Time/space complexity
 
-Hints:
-user score is between 0-100 on how does it similar logic to the real solution, 
+2. Implementation (30 points)
+   - Code structure
+   - Variable naming
+   - Error handling
 
+3. Output (30 points)
+   - Correct results
+   - Expected behavior
+   - Format compliance
 
-OUTPUT FORMAT:
-   return only user score (number between 0-100), nothing else (strictly nothing else)
+Return only the score (0-100), nothing else.
 """
 
 CODE_GENERATION_TEMPLATE = """
-Generate {num_codes} coding challenges for each of these difficulty levels: {difficulties}.
-The challenges should be based on the following material and programming language: {programming_language}.
-Focus on practical applications of the concepts.
+Generate {num_codes} coding challenges for {programming_language}.
 
-For each challenge, provide the following, with each field on a new line:
-1. Problem Statement: [The problem description]
-2. Solution: [The full solution code]
-3. Template: [The boilerplate code for the user]
-4. Difficulty: [One of: {difficulties}]
+Requirements:
+1. Each challenge must be practical and testable
+2. Include edge cases and error handling
+3. Focus on real-world applications
+4. Vary complexity across {difficulties}
 
-Separate each complete challenge block with a line containing only '=============='.
+Format each challenge as:
+Problem Statement: [Clear, specific task]
+Solution: [Complete, working code]
+Template: [Starter code with TODO]
+Difficulty: [One of: {difficulties}]
+
+Separate challenges with '=============='
+
+Material Context:
+{chunk}
+
+Example:
+Problem Statement: Implement a function to validate email addresses
+Solution:
+def validate_email(email):
+    import re
+    pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+    return bool(re.match(pattern, email))
+Template:
+def validate_email(email):
+    # TODO: Implement email validation
+    pass
+Difficulty: Easy
+==============
+"""
+
+CODE_SUMMARY_TEMPLATE = """
+Create a programming-focused summary for {language} challenges.
+Extract:
+1. Core Concepts
+   - Key algorithms
+   - Data structures
+   - Design patterns
+   - Language-specific features
+
+2. Implementation Patterns
+   - Common solutions
+   - Best practices
+   - Error handling
+   - Performance considerations
+
+3. Challenge Opportunities
+   - Practical applications
+   - Problem scenarios
+   - Testing scenarios
+   - Edge cases
+
+Keep summary focused and actionable.
+Target length: 30-40% of original.
 
 Material:
 {chunk}
-
-Example format:
-Problem Statement: Write a function to add two numbers.
-Solution: 
-   def add(a, b):
-      return a + b
-Template: 
-Solution: 
-   # function to implement
-   def add(a, b):
-      # todo
-      raise NotImplementedError("Not implemented")
-  
-Difficulty: Easy
-==============
-Problem Statement: Write a function to subtract two numbers.
-Solution: 
-   def sub(a, b):
-      return a - b
-Template:
-Solution: 
-   # function to implement
-   def sub(a, b):
-      # todo
-      raise NotImplementedError("Not implemented")
-Difficulty: Easy
 """

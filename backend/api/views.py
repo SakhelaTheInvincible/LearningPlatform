@@ -13,7 +13,8 @@ from api.serializers import (CourseSerializer,
                              UserSerializer, UserSignUpSerializer,
                              PasswordChangeSerializer, UserPublicSerializer, AdminSerializer, CourseCreateSerializer, CourseRetrieveSerializer,
                              CourseListSerializer, WeekCreateSerializer, MaterialCreateSerializer,
-                             QuestionCreateSerializer, QuizCreateSerializer, CodeSerializer, CodeCreateSerializer, QuizListSerializer, QuizSerializer)
+                             QuestionCreateSerializer, QuizCreateSerializer, CodeSerializer,
+                             CodeCreateSerializer, QuizListSerializer, QuizSerializer, CodeListSerializer)
 
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
@@ -313,6 +314,7 @@ class CourseViewSet(mixins.CreateModelMixin,
 class WeekViewSet(mixins.CreateModelMixin,
                   mixins.RetrieveModelMixin,
                   mixins.DestroyModelMixin,
+                  mixins.UpdateModelMixin,
                   viewsets.GenericViewSet):
     queryset = Week.objects.all()
     lookup_field = 'week_number'
@@ -336,13 +338,17 @@ class WeekViewSet(mixins.CreateModelMixin,
         course = get_object_or_404(queryset)
         if course.user != user:
             return Response({'detail': 'Not allowed to add weeks to this course.'}, status=status.HTTP_403_FORBIDDEN)
-
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(course=course)
 
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.materials.all().delete()
+        return Response(status=status.HTTP_200_OK)
 
     def get_object(self):
         user = self.request.user
@@ -359,6 +365,7 @@ class WeekViewSet(mixins.CreateModelMixin,
 
         self.check_object_permissions(self.request, obj)
         return obj
+
 
 # ====================#
 
@@ -415,6 +422,8 @@ class MaterialViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
+            print(f"File received: {file.name}, size: {file.size} bytes")
+
             # Validate file extension
             allowed_extensions = {'.txt', '.docx', '.pdf', '.md', '.rtf'}
             file_ext = os.path.splitext(file.name)[1].lower()
@@ -424,19 +433,27 @@ class MaterialViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
+            print(f"File type validated: {file_ext}")
+
             # Process file
             try:
+                print("Starting file processing...")
                 material, summarized_material = self.process_material_file(
                     file)
+                print(
+                    f"File processed. Material length: {len(material)}, Summary length: {len(summarized_material)}")
             except ValueError as e:
+                print(f"Error processing file: {str(e)}")
                 return Response(
                     {'detail': str(e)},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
             # Create material
+            print("Creating material record...")
             serializer = self.get_serializer(data=request.data)
             if not serializer.is_valid():
+                print(f"Serializer validation failed: {serializer.errors}")
                 return Response(
                     serializer.errors,
                     status=status.HTTP_400_BAD_REQUEST
@@ -447,6 +464,7 @@ class MaterialViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
                 summarized_material=summarized_material,
                 week=week
             )
+            print("Material record created successfully")
 
             headers = self.get_success_headers(serializer.data)
             return Response(
@@ -539,9 +557,16 @@ class QuizViewSet(mixins.RetrieveModelMixin,
             week__week_number=week_number,
             week__course__title_slug=title_slug,
             week__course__user=user
-        )
+        ).order_by('-created_at')  # Order by most recent first
 
-        obj = get_object_or_404(queryset)
+        # Get the most recent quiz
+        obj = queryset.first()
+        if not obj:
+            return Response(
+                {'detail': 'Quiz not found'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         self.check_object_permissions(self.request, obj)
         return obj
 
@@ -574,7 +599,6 @@ class QuizViewSet(mixins.RetrieveModelMixin,
         user = request.user
         title_slug = self.kwargs['title_slug']
         week_number = self.kwargs['week_number']
-
         # Get week with related data
         queryset = Week.objects.select_related('course', 'course__user').filter(
             course__title_slug=title_slug,
@@ -679,7 +703,8 @@ class QuizViewSet(mixins.RetrieveModelMixin,
 
         # Calculate optimal number of workers
         cpu_count = os.cpu_count() or 4  # fallback to 4 if cpu_count returns None
-        max_workers = min(32, (2 * cpu_count) + 1)  # cap at 32 to prevent resource exhaustion
+        # cap at 32 to prevent resource exhaustion
+        max_workers = min(32, (2 * cpu_count) + 1)
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             results = list(executor.map(process_item, items))
@@ -691,48 +716,96 @@ class QuizViewSet(mixins.RetrieveModelMixin,
 
 # Code section
 # ====================#
-class CodeViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
-    serializer_class = CodeSerializer
+class CodeViewSet(mixins.CreateModelMixin,
+                  mixins.ListModelMixin,
+                  mixins.RetrieveModelMixin,
+                  viewsets.GenericViewSet):
+    # authentication_classes = [JWTAuthentication]
+    # permission_classes = [IsAuthenticated]
+    lookup_field = 'id'
+
+    def get_serializer_class(self):
+        serializer_map = {
+            'retrieve': CodeSerializer,
+            'list': CodeListSerializer,
+            'create': CodeCreateSerializer,
+            'create_coding_problems': CodeCreateSerializer
+        }
+        return serializer_map.get(self.action, CodeSerializer)
 
     def get_queryset(self):
+        """Get codes for the specified week."""
         title_slug = self.kwargs['title_slug']
         week_number = self.kwargs['week_number']
-        course = get_object_or_404(Course.objects.all(), title_slug=title_slug)
-        week = get_object_or_404(
-            Week.objects.all(), course=course, week_number=week_number)
-        return Code.objects.filter(week=week)  # Return all codes for the week
 
-    def create(self, request, *args, **kwargs):
-        user = request.user
-        queryset = Course.objects.all()
-        title_slug = self.kwargs['title_slug']
-        week_number = self.kwargs['week_number']
-        course = get_object_or_404(queryset, title_slug=title_slug)
+        return Code.objects.select_related(
+            'week',
+            'week__course'
+        ).filter(
+            week__course__title_slug=title_slug,
+            week__week_number=week_number
+        )
 
-        if course.user != user:
-            return Response({'detail': 'Not allowed'}, status=status.HTTP_403_FORBIDDEN)
-
-        # get the correct week
-        queryset = Week.objects.all()
-        week = get_object_or_404(
-            queryset, course=course, week_number=week_number)
-
-        # Generate all coding problems for the week
-        try:
-            result = generate_coding_problems_for_week(week=week)
-            return Response({
-                'detail': 'Coding problems generated successfully',
-                'generation_stats': result
-            }, status=status.HTTP_201_CREATED)
-        except Exception as e:
-            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    def retrieve(self, request, *args, **kwargs):
+        """Get a specific coding problem."""
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
     def list(self, request, *args, **kwargs):
+        """List all coding problems for a week."""
         queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['POST'])
+    def create_coding_problems(self, request, *arg, **kwargs):
+        """Create coding problems for a specific week."""
+        user = request.user
+        title_slug = self.kwargs['title_slug']
+        week_number = self.kwargs['week_number']
+        # Get week with related data
+        queryset = Week.objects.select_related('course', 'course__user').filter(
+            course__title_slug=title_slug,
+            week_number=week_number
+        )
+        week = get_object_or_404(queryset)
+
+        if week.course.user != user:
+            return Response({'detail': 'Not allowed to add coding problems to this course.'}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            with transaction.atomic():
+                result = generate_coding_problems_for_week(week=week)
+
+                Code.objects.filter(week=week).delete()
+
+                created_codes = []
+                for code_data in result['codes']:
+                    serializer = self.get_serializer(data=code_data)
+                    serializer.is_valid(raise_exception=True)
+                    code = serializer.save(week=week)
+                    created_codes.append(code)
+
+                return Response({
+                    'message': f'Successfully created {len(created_codes)} coding problems',
+                    'distribution': result['distribution'],
+                    'problems': [{
+                        'id': code.id,
+                        'difficulty': code.difficulty,
+                        'problem_statement': code.problem_statement[:100] + '...'
+                    } for code in created_codes]
+                }, status=status.HTTP_201_CREATED)
+
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {'error': 'Failed to create coding problems'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 # ====================#
 

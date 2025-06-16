@@ -370,7 +370,7 @@ class Code(models.Model):
     difficulty = models.CharField(
         max_length=1,
         choices=DIFFICULTY_LEVEL_CHOICES,
-        default='S'
+        default='M'
     )
 
     problem_statement = models.TextField()
