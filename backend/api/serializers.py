@@ -194,7 +194,8 @@ class CodeCreateSerializer(serializers.ModelSerializer):
             'difficulty',
             'problem_statement',
             'solution',
-            'template_code'
+            'template_code',
+            'user_code'
         ]
 
 
@@ -225,6 +226,7 @@ class CodeSerializer(serializers.ModelSerializer):
             'problem_statement',
             'solution',
             'template_code',
+            'user_code',
             'user_score'
         ]
 

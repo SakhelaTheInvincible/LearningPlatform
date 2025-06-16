@@ -37,7 +37,6 @@ else:  # Windows or other OS
         print("CUDA not available, using CPU")
 
 
-
 def _summarize_chunk(chunk: str, summarizer) -> str:
     input_length = len(chunk.split())
     target_length = int(input_length * 0.9)
@@ -45,14 +44,15 @@ def _summarize_chunk(chunk: str, summarizer) -> str:
     min_len = min(min_len, 142)
 
     try:
-        result = summarizer(
-            chunk,
-            min_length=min_len,
-            do_sample=False,
-            clean_up_tokenization_spaces=True
-        )
-        summary = result[0]['summary_text'].strip()
-        return ' '.join(summary.split())
+        with torch.no_grad():  # Disable gradient calculation
+            result = summarizer(
+                chunk,
+                min_length=min_len,
+                do_sample=False,
+                clean_up_tokenization_spaces=True
+            )
+            summary = result[0]['summary_text'].strip()
+            return ' '.join(summary.split())
     except Exception as e:
         print(f"Error summarizing chunk: {str(e)}")
         return chunk
@@ -66,36 +66,62 @@ def generate_material_summary(material: str) -> str:
     try:
         print("Loading summarization model...")
         summarizer = pipeline(
-            "summarization", model="facebook/bart-large-cnn", device=device)
+            "summarization",
+            model="facebook/bart-large-cnn",
+            device=device,
+            torch_dtype=torch.float16 if device != -
+            1 else torch.float32  # Use half precision if not CPU
+        )
         print("Model loaded successfully")
 
-        # Reduce number of workers for CPU
-        max_workers = 2 if device == -1 else 6
+        # Calculate optimal number of workers based on system
+        cpu_count = os.cpu_count() or 4
+        max_workers = min(4, cpu_count)  # Cap at 4 workers
         print(f"Using {max_workers} workers for processing")
+
+        full_summary = []
+        chunk_results = [None] * len(chunks)  # Pre-allocate results array
+
+        def process_chunk(chunk_idx):
+            try:
+                chunk = chunks[chunk_idx]
+                result = _summarize_chunk(chunk, summarizer)
+                return chunk_idx, result
+            except Exception as e:
+                print(f"Error processing chunk {chunk_idx + 1}: {str(e)}")
+                return chunk_idx, chunks[chunk_idx]
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             print("Starting parallel processing of chunks...")
-            futures = [executor.submit(
-                _summarize_chunk, chunk, summarizer) for chunk in chunks]
-            full_summary = []
+            futures = [executor.submit(process_chunk, i)
+                       for i in range(len(chunks))]
 
-            for i, future in enumerate(futures):
+            for future in futures:
                 try:
-                    result = future.result()
-                    full_summary.append(result)
-                    print(f"Processed chunk {i+1}/{len(chunks)}")
+                    chunk_idx, result = future.result()
+                    chunk_results[chunk_idx] = result
+                    print(f"Processed chunk {chunk_idx + 1}/{len(chunks)}")
                 except Exception as e:
-                    print(f"Error processing chunk {i+1}: {str(e)}")
-                    # Use original chunk if summarization fails
-                    full_summary.append(chunks[i])
+                    print(f"Error getting result: {str(e)}")
 
+        # Filter out None results and join
+        full_summary = [r for r in chunk_results if r is not None]
         print("All chunks processed successfully")
         return "\n\n".join(full_summary)
 
     except Exception as e:
         print(f"Error in summary generation: {str(e)}")
-        # Return first 500 characters as fallback
         return material[:500] + "..."
+    finally:
+        # Clean up resources
+        if 'summarizer' in locals():
+            del summarizer
+            import gc
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            elif torch.backends.mps.is_available():
+                torch.mps.empty_cache()
 
 
 def parse_question_lines(response_text):
@@ -229,12 +255,13 @@ def compare_open_answers(answer: str, user_answer: str) -> dict:
         return result
 
 
-def compare_coding_answers(answer: str, user_answer: str, programming_language: str = "python") -> dict:
+def compare_coding_solutions(problem_statement: str, solution: str, user_solution: str, programming_language: str = "python") -> dict:
     """Compare coding question answers."""
     client = get_ai_client()
     prompt = CODE_COMPARISON_TEMPLATE.format(
-        correct_answer=answer,
-        user_answer=user_answer,
+        problem_statement=problem_statement,
+        solution=solution,
+        user_solution=user_solution,
         programming_language=programming_language
     )
 
@@ -257,7 +284,6 @@ def compare_coding_answers(answer: str, user_answer: str, programming_language: 
             'user_score': 0,
             'hint': str(e)
         }
-
 
 def parse_code_lines(response_text):
     codes = []
@@ -334,7 +360,8 @@ def parse_code_lines(response_text):
                 "difficulty": difficulty,
                 "problem_statement": problem_statement,
                 "solution": solution,
-                "template_code": template_code
+                "template_code": template_code,
+                'user_code': template_code
             })
 
         except Exception as e:
@@ -385,7 +412,8 @@ def generate_code_specific_summary(material: str, client, language: str) -> str:
                     full_summary.append(result)
                     print(f"Processed code summary chunk {i+1}/{len(chunks)}")
                 except Exception as e:
-                    print(f"Error processing code summary chunk {i+1}: {str(e)}")
+                    print(
+                        f"Error processing code summary chunk {i+1}: {str(e)}")
                     full_summary.append(chunks[i])
 
         print("All code summary chunks processed successfully.")

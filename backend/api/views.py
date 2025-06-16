@@ -2,7 +2,7 @@ from rest_framework.decorators import api_view, APIView, action
 from rest_framework.response import Response
 from rest_framework import status
 import random
-from ai.services import generate_material_summary, generate_questions_for_week, compare_open_answers, generate_coding_problems_for_week
+from ai.services import compare_coding_solutions, generate_questions_for_week, compare_open_answers, generate_coding_problems_for_week
 from api.models import Course, Week, Question, Material, User, Quiz, Code
 from api.serializers import CourseSerializer, QuestionSerializer, QuizSerializer, WeekSerializer
 from file_manager.file_manager import extract_text, process_material_file
@@ -758,6 +758,48 @@ class CodeViewSet(mixins.CreateModelMixin,
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['PUT'])
+    def set_user_score(self, request, *args, **kwargs):
+        try:
+            new_score = request.data.get('user_score')
+            if new_score is None:
+                return Response({'error': 'user_score is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                new_score = float(new_score)
+                if not 0 <= new_score <= 100:
+                    return Response({'error': 'Score must be between 0 and 100'}, status=status.HTTP_400_BAD_REQUEST)
+            except ValueError:
+                return Response({'error': 'Invalid score format'}, status=status.HTTP_400_BAD_REQUEST)
+
+            instance = self.get_object()
+            instance.user_score = new_score
+            instance.save()
+
+            return Response({
+                'message': 'Score updated successfully',
+                'new_score': new_score
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['PUT'])
+    def set_user_code(self, request, *args, **kwargs):
+        try:
+            new_code = request.data.get('user_code')
+            instance = self.get_object()
+            instance.user_code = new_code
+            instance.save()
+
+            return Response({
+                'message': 'user_code updated successfully',
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
     @action(detail=False, methods=['POST'])
     def create_coding_problems(self, request, *arg, **kwargs):
         """Create coding problems for a specific week."""
@@ -807,40 +849,13 @@ class CodeViewSet(mixins.CreateModelMixin,
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-# ====================#
-
-# class CodeCheckView(APIView):
-#     def post(self, request, title, selectedWeek):
-#         code_id = request.data.get('code_id')
-#         solution = request.data.get('solution')
-
-#         if not code_id or not solution:
-#             return Response(
-#                 {"error": "code_id and solution are required"},
-#                 status=status.HTTP_400_BAD_REQUEST
-#             )
-
-#         # Get the code and verify it belongs to the correct week/course
-#         code = get_object_or_404(
-#             Code.objects.select_related('week__course'),
-#             id=code_id,
-#             week__course__title=title,
-#             week__week_number=selectedWeek
-#         )
-
-#         comparison = compare_answers(
-#             question_type="coding",
-#             correct_answer=code.solution,
-#             user_answer=solution
-#         )
-#         user_score = comparison['user_score']
-#         error = comparison['error']
-
-#         code.user_score = user_score
-#         code.template_code = solution
-#         code.save(update_fields=['user_score', 'template_code'])
-
-#         return Response({
-#             "user_score": user_score,
-#             "error": error
-#         })
+    @action(detail=True, methods=['POST'])
+    def evaluate_coding_solution(self, request, *arg, **kwargs):
+        items = request.data
+        problem_statement = items['problem_statement']
+        solution = items['solution']
+        user_solution = items['user_solution']
+        programming_language = items['programming_language']
+        result = compare_coding_solutions(
+            problem_statement, solution, user_solution, programming_language)
+        return Response(result, status=status.HTTP_200_OK)

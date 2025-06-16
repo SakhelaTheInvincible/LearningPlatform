@@ -39,6 +39,6 @@ psycopg==3.1.18
 transformers==4.52.4
 tokenizers==0.21.1
 safetensors==0.5.3
-torch==2.7.1+cu118
-torchvision==0.22.1+cu118
-torchaudio==2.7.1+cu118
+# torch==2.7.1+cu118
+# torchvision==0.22.1+cu118
+# torchaudio==2.7.1+cu118

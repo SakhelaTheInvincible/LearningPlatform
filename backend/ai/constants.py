@@ -82,35 +82,59 @@ Please only return true or false, nothing more (all lowercase)
 """
 
 CODE_COMPARISON_TEMPLATE = """
-Compare code solutions and return a score (0-100).
+Compare a user's code solution with the expected solution, using the problem statement as the primary evaluation guide.
 
 Context:
-- Language: {programming_language}
-- Expected: {correct_answer}
-- User's: {user_answer}
+- Problem Statement: {problem_statement}
+- Programming Language: {programming_language}
+- Expected Solution: {solution}
+- User's Solution: {user_solution}
 
 Rules for comparison:
-   - Ignore whitespace and formatting differencesAdd commentMore actions
-   - Accept different variable names if logic is identical
-   - Consider alternative valid implementations
-   - Focus on algorithmic correctness and output
-   
-Be lenient with language/formatting but strict with core concepts and logic
+1. Evaluate if the user's solution satisfies the requirements specified in the problem statement
+2. Check if the solution follows the programming language's best practices and conventions
+3. Consider alternative valid approaches that may differ from the expected solution but still solve the problem
+4. Verify that the solution:
+   - Handles the core problem requirements
+   - Uses appropriate data structures and algorithms
+   - Has correct logic and flow
+   - Produces the expected output
+5. Ignore differences in:
+   - Variable/function naming (unless specified in requirements)
+   - Code formatting and style
+   - Implementation details that don't affect functionality
+6. Be lenient with alternative valid solutions that demonstrate understanding
 
-Hints:
-user score is between 0-100 on how does it similar logic to the real solution, 
+Scoring Criteria:
+- 100: Perfect solution that meets all requirements
+- 90-99: Minor improvements needed (edge cases, optimizations)
+- 70-89: Good approach but has some issues
+- 50-69: Correct basic logic but significant issues
+- 30-49: Partial understanding, major issues
+- 1-29: Significant problems, but shows some attempt
+- 0: Syntax errors, runtime errors, or completely incorrect
 
+Output Format:
+Return the score and detailed hint separated by a pipe character (|)
 
-OUTPUT FORMAT:
-   return only user score (number between 0-100), and hint (string) seperated by |
+Example outputs:
+0|Syntax Error: Missing closing bracket in function definition
+0|Runtime Error: Division by zero in line 15
+100|Perfect solution! Code is efficient and handles all edge cases
+95|Excellent solution! Consider optimizing the loop in lines 20-25
+85|Good solution! Missing handling for negative numbers in the input
+75|Correct approach but inefficient. Consider using a hash map instead of nested loops
+50|Basic logic is correct but has several issues:
+  - Missing input validation
+  - Incorrect loop condition in line 12
+  - Doesn't handle empty input case
+30|Shows understanding of the problem but implementation has major flaws:
+  - Incorrect algorithm choice
+  - Multiple syntax errors
+  - Missing core functionality
+0|Solution doesn't address the problem requirements
 
-
-Example Output
-0|Syntax Error
-0|Runtime Error
-100|Good
-90|Almost correct, needs improvement in edge cases (minimum, maximum, etc....).... (line ....)
-50|Correct logic, but has mistakes (hint: pay attention to line ...)
+Please provide both the score (0-100) and a specific, detailed hint about the solution
 """
 
 CODE_GENERATION_TEMPLATE = """
