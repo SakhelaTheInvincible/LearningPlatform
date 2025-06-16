@@ -210,6 +210,7 @@ class CodeListSerializer(serializers.ModelSerializer):
             'problem_statement',
             'solution',
             'template_code',
+            'user_code',
             'user_score',
         ]
 
