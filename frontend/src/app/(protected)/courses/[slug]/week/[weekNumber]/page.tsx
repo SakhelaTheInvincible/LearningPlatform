@@ -52,6 +52,8 @@ export default function WeekLearning() {
         const res = await api.get(`/courses/${slug}`);
         const data = res.data;
 
+        console.log(data);
+
         const week = data.weeks?.find((w: any) => w.week_number === weekNumber);
 
         const parts: Part[] =
@@ -84,7 +86,12 @@ export default function WeekLearning() {
     if (slug && weekNumber) fetchCourse();
   }, [slug, weekNumber]);
 
-  if (loading) return <div className="p-10"><LoadingPage/></div>;
+  if (loading)
+    return (
+      <div className="p-10">
+        <LoadingPage />
+      </div>
+    );
   if (!course) return <div className="p-10">Course not found.</div>;
 
   return (

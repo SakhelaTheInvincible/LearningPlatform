@@ -3,6 +3,7 @@
 import { Dialog, Transition } from "@headlessui/react";
 import { Fragment, useState } from "react";
 import api from "@/src/lib/axios";
+import LoadingComponent from "./UploadLoadingComponent";
 
 interface UploadWeekDialogProps {
   isOpen: boolean;
@@ -24,8 +25,15 @@ export default function UploadWeekDialog({
   const [materialDescription, setMaterialDescription] = useState("");
   const [uploadedWeeks, setUploadedWeeks] = useState<Set<number>>(new Set());
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [isCodeGeneration, setIsCodeGeneration] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("Loading...");
+
+  function showTemporaryMessage(msg: string, duration = 1000) {
+    setMessage(msg);
+    setTimeout(() => setMessage(null), duration);
+  }
 
   const openMaterialUpload = (weekNumber: number) => {
     setSelectedWeek(weekNumber);
@@ -47,7 +55,7 @@ export default function UploadWeekDialog({
           headers: { "Content-Type": "multipart/form-data" },
         });
       } catch (err) {
-      // Week doesn't exist, create it
+        // Week doesn't exist, create it
         await api.post(`/courses/${slug}/weeks/`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
@@ -59,7 +67,6 @@ export default function UploadWeekDialog({
 
   const handleMaterialUpload = async () => {
     setError("");
-    setSuccess("");
     if (!material || selectedWeek === null) return;
 
     const formData = new FormData();
@@ -68,6 +75,8 @@ export default function UploadWeekDialog({
     formData.append("description", materialDescription);
 
     try {
+      setIsLoading(true);
+      setLoadingMessage("Uploading material...");
       await api.post(
         `/courses/${slug}/weeks/${selectedWeek}/materials/`,
         formData,
@@ -75,24 +84,27 @@ export default function UploadWeekDialog({
           headers: { "Content-Type": "multipart/form-data" },
         }
       );
-
+      setLoadingMessage("Generating quiz questions...");
       await api.post(`/courses/${slug}/weeks/${selectedWeek}/questions/`);
-
+      setLoadingMessage("Creating quizes...");
       await api.post(
-        `/courses/${slug}/weeks/${selectedWeek}/quizzes/create_quizzes/`,
+        `/courses/${slug}/weeks/${selectedWeek}/quizzes/create_quizzes/`
       );
 
       if (isCodeGeneration) {
         try {
-          const response = await api.post(`/courses/${slug}/weeks/${selectedWeek}/codes/create_coding_problems/`, {});
+          setLoadingMessage("Generating coding challanges...");
+          const response = await api.post(
+            `/courses/${slug}/weeks/${selectedWeek}/codes/create_coding_problems/`,
+            {}
+          );
           const { problems, distribution } = response.data;
 
           console.log(`Generated ${problems.length} coding problems`);
-          console.log('Difficulty distribution:', distribution);
-
-          setSuccess(`Successfully generated ${problems.length} coding problems`);
+          console.log("Difficulty distribution:", distribution);
         } catch (codeErr: any) {
-          const errorMessage = codeErr?.response?.data?.error ||
+          const errorMessage =
+            codeErr?.response?.data?.error ||
             codeErr?.response?.data?.detail ||
             "Error generating coding problems";
           setError(errorMessage);
@@ -106,7 +118,9 @@ export default function UploadWeekDialog({
       setMaterialDescription("");
       setIsCodeGeneration(false);
       setUploadedWeeks((prev) => new Set(prev).add(selectedWeek));
-      setSuccess("Material uploaded successfully.");
+      showTemporaryMessage("Material uploaded successfully");
+      setIsLoading(false);
+      setLoadingMessage("Loading...");
     } catch (err: any) {
       setError(err?.response?.data?.detail || "Error uploading material.");
     }
@@ -119,13 +133,27 @@ export default function UploadWeekDialog({
 
   return (
     <>
+      {/* Message */}
+      {message && (
+        <div className="flex flex-row fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-[#252526] text-sm text-white px-6 py-2 rounded-lg border border-gray-700 shadow-md animate-fade-in-out">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="size-5 mr-2 text-green-600"
+          >
+            <path
+              fillRule="evenodd"
+              d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z"
+              clipRule="evenodd"
+            />
+          </svg>
+          {message}
+        </div>
+      )}
       {/* Weeks Modal */}
       <Transition appear show={isOpen} as={Fragment}>
-        <Dialog
-          as="div"
-          className="relative z-10"
-          onClose={resetAndClose}
-        >
+        <Dialog as="div" className="relative z-10" onClose={resetAndClose}>
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -212,69 +240,77 @@ export default function UploadWeekDialog({
                 leaveFrom="opacity-100 scale-100"
                 leaveTo="opacity-0 scale-95"
               >
-                <Dialog.Panel className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-                  <Dialog.Title className="text-lg font-medium text-gray-900">
-                    Upload Material for Week {selectedWeek}
-                  </Dialog.Title>
-                  <input
-                    type="text"
-                    placeholder="Material Title"
-                    className="w-full mt-4 rounded border px-3 py-2"
-                    value={materialTitle}
-                    onChange={(e) => setMaterialTitle(e.target.value)}
-                  />
-                  <textarea
-                    placeholder="Material Description"
-                    className="w-full mt-4 mb-2 rounded border px-3 py-2"
-                    value={materialDescription}
-                    onChange={(e) => setMaterialDescription(e.target.value)}
-                  />
+                {isLoading ? (
+                  // ⏳ Show loading spinner
+                  <LoadingComponent message={loadingMessage} />
+                ) : (
+                  <Dialog.Panel className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+                    <Dialog.Title className="text-lg font-medium text-gray-900">
+                      Upload Material for Week {selectedWeek}
+                    </Dialog.Title>
+                    <input
+                      type="text"
+                      placeholder="Material Title"
+                      className="w-full mt-4 rounded border px-3 py-2"
+                      value={materialTitle}
+                      onChange={(e) => setMaterialTitle(e.target.value)}
+                    />
+                    <textarea
+                      placeholder="Material Description"
+                      className="w-full mt-4 mb-2 rounded border px-3 py-2"
+                      value={materialDescription}
+                      onChange={(e) => setMaterialDescription(e.target.value)}
+                    />
 
-                  <div className="mt-4 mb-4">
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={isCodeGeneration}
-                        onChange={(e) => setIsCodeGeneration(e.target.checked)}
-                        className="rounded border-gray-300"
-                      />
-                      <span>Is this material good for code generation?</span>
-                    </label>
-                  </div>
+                    <div className="mt-4 mb-4">
+                      <label className="flex items-center space-x-2 text-md text-gray-700 mb-2">
+                        <input
+                          type="checkbox"
+                          checked={isCodeGeneration}
+                          onChange={(e) =>
+                            setIsCodeGeneration(e.target.checked)
+                          }
+                          className="h-4 w-4 rounded border-gray-300 accent-indigo-600"
+                        />
+                        <span>Gernerate coding tasks?</span>
+                      </label>
+                    </div>
 
-                  <label
-                    htmlFor="material-upload"
-                    className="cursor-pointer inline-block text-indigo-600 hover:underline"
-                  >
-                    Choose File
-                  </label>
-
-                  <input
-                    id="material-upload"
-                    type="file"
-                    accept=".txt,.pdf,.doc,.docx"
-                    onChange={(e) => setMaterial(e.target.files?.[0] || null)}
-                    className="hidden"
-                  />
-                  {material && (
-                    <p className="mt-2 text-sm text-gray-600">
-                      Selected: {material.name}
-                    </p>
-                  )}
-                  <div className="mt-6">
-                    {error && <div className="text-red-600 text-sm mb-2">{error}</div>}
-                    {success && <div className="text-green-600 text-sm mb-2">{success}</div>}
-                    <button
-                      onClick={async () => {
-                        await handleWeekUpload();
-                        await handleMaterialUpload();
-                      }}
-                      className="w-full rounded bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-500"
+                    <label
+                      htmlFor="material-upload"
+                      className="cursor-pointer inline-block text-indigo-600 hover:underline"
                     >
-                      Upload Material
-                    </button>
-                  </div>
-                </Dialog.Panel>
+                      Choose File
+                    </label>
+
+                    <input
+                      id="material-upload"
+                      type="file"
+                      accept=".txt,.pdf,.doc,.docx"
+                      onChange={(e) => setMaterial(e.target.files?.[0] || null)}
+                      className="hidden"
+                    />
+                    {material && (
+                      <p className="mt-2 text-sm text-gray-600">
+                        Selected: {material.name}
+                      </p>
+                    )}
+                    <div className="mt-6">
+                      {error && (
+                        <div className="text-red-600 text-sm mb-2">{error}</div>
+                      )}
+                      <button
+                        onClick={async () => {
+                          await handleWeekUpload();
+                          await handleMaterialUpload();
+                        }}
+                        className="w-full rounded bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-500"
+                      >
+                        Upload Material
+                      </button>
+                    </div>
+                  </Dialog.Panel>
+                )}
               </Transition.Child>
             </div>
           </div>

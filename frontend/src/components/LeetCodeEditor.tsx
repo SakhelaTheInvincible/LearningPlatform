@@ -8,9 +8,11 @@ import api from "../lib/axios";
 
 const languages = [
   { name: "JavaScript", value: "javascript" },
+  { name: "TypeScript", value: "typescript" },
   { name: "Python", value: "python" },
-  { name: "C++", value: "cpp" },
   { name: "Java", value: "java" },
+  { name: "C++", value: "cpp" },
+  { name: "SQL", value: "sql" },
 ];
 
 export default function LeetCodeEditor({
