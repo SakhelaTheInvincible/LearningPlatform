@@ -1,13 +1,33 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import CodeEditor from "@/src/components/CodeEditor";
 import Header from "@/src/components/Header";
 import WeekMenu from "@/src/components/weekMenu";
 import Breadcrumbs from "@/src/components/Breadcrumbs";
+import LeetCodeEditor from "@/src/components/LeetCodeEditor";
+import EditorLayout from "@/src/components/EditorLayout";
+import api from "@/src/lib/axios";
+import { useParams } from "next/navigation";
+import CodingTaskCard from "@/src/components/CodingTaskCard";
+
+interface Code {
+  difficulty_display: string;
+  id: number;
+  problem_statement: string;
+  solution: string;
+  template_code: string;
+  user_code: string;
+  user_score: number;
+}
 
 export default function Week1Coding() {
   const [output, setOutput] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
+  const [codeTasks, setCodeTasks] = useState<Code[]>([]);
+
+  const params = useParams();
+  const slug = params?.slug as string;
+  const weekNumber = parseInt(params?.weekNumber as string);
 
   const initialCode = `// Write your code here
 console.log('Hello, World!');`;
@@ -33,6 +53,27 @@ console.log('Hello, World!');`;
       setOutput(""); // Clear output when there is an error
     }
   };
+
+  useEffect(() => {
+    async function fetchCode() {
+      try {
+        const res = await api.get(
+          `/courses/${slug}/weeks/${weekNumber}/codes/`
+        );
+        const data = res.data;
+        console.log(data);
+
+        if (data.length > 0) {
+          setCodeTasks(data);
+        }
+      } catch (error) {
+        console.error("Failed to load coding challenges:", error);
+      }
+    }
+
+    fetchCode();
+  }, []);
+
   return (
     <>
       <div className="flex flex-col">
@@ -69,42 +110,41 @@ console.log('Hello, World!');`;
               <div className="px-[150px] py-[80px]">
                 <div className=""></div>
                 <h2 className="text-3xl font-semibold text-indigo-600 mb-4">
-                  Week 1: Task
+                  Week {weekNumber}: Coding Challenge
                 </h2>
                 <p className="text-gray-700 mb-8">
-                  Welcome to Week 1! This week you &apos;ll learn about
-                  variables, data types, and basic control flow in JavaScript.
+                  Each week’s coding challenge is carefully crafted from the
+                  material you've just studied. These tasks are designed to help
+                  you apply what you’ve learned in a practical way, reinforce
+                  your understanding, and build confidence in solving real-world
+                  programming problems.
                 </p>
 
                 <div className="mb-8">
                   <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                    Code Editor
+                    Coding Tasks
                   </h3>
-                  <CodeEditor
+                  {/* <CodeEditor
                     language="javascript"
                     defaultValue={initialCode}
-                  />
-                </div>
-
-                <button
-                  onClick={handleRunCode}
-                  className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md"
-                >
-                  Run Code
-                </button>
-
-                {/* Show error if there is one */}
-                {error && (
-                  <div className="mt-6 text-red-600">
-                    <h3 className="font-semibold">Error:</h3>
-                    <pre>{error}</pre>
+                  /> */}
+                  {/* <LeetCodeEditor
+                    onSubmit={function (code: string): void {
+                      throw new Error("Function not implemented.");
+                    }}
+                  /> */}
+                  <div className="space-y-4">
+                    {codeTasks.map((task, index) => (
+                      <CodingTaskCard
+                        key={task.id}
+                        taskNumber={index + 1}
+                        taskId={task.id}
+                        description={task.problem_statement}
+                        difficulty={task.difficulty_display}
+                        userScore={task.user_score}
+                      />
+                    ))}
                   </div>
-                )}
-
-                {/* Show output */}
-                <div className="mt-6">
-                  <h3 className="font-semibold text-gray-800">Output:</h3>
-                  <pre className="bg-gray-100 p-4 rounded-md">{output}</pre>
                 </div>
               </div>
             </div>
