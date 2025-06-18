@@ -117,6 +117,10 @@ Scoring Criteria:
 Output Format:
 Return the score and detailed hint separated by a pipe character (|)
 
+Hint:
+Scoring should only matter in #TODO-s, if there is no implementation in todo functions, then user scores 0
+(evaluations must be in todo functions too). Also pay attention to syntax and runtime errors first, and then other issues.
+
 Example outputs:
 0|Syntax Error: Missing closing bracket in function definition
 0|Runtime Error: Division by zero in line 15
@@ -130,9 +134,9 @@ Example outputs:
   - Doesn't handle empty input case
 30|Shows understanding of the problem but implementation has major flaws:
   - Incorrect algorithm choice
-  - Multiple syntax errors
   - Missing core functionality
-0|Solution doesn't address the problem requirements
+  - Runtime Errors
+0|Solution doesn't address the problem requirements, Or Syntax Error
 
 Please provide both the score (0-100) and a specific, detailed hint about the solution
 """
