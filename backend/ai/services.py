@@ -443,16 +443,12 @@ def generate_coding_problems_for_week(week: Week) -> dict:
 
     # Dynamically set problems per difficulty based on summary length
     word_count = len(code_summary.split())
-    if word_count < 500:
+    if word_count < 1000:
         problems_per_difficulty = 1
-    elif word_count < 1000:
-        problems_per_difficulty = 2
-    elif word_count < 2000:
-        problems_per_difficulty = 3
     elif word_count < 3000:
-        problems_per_difficulty = 4
+        problems_per_difficulty = 2
     else:
-        problems_per_difficulty = 5
+        problems_per_difficulty = 3
 
     # Generate problems with balanced distribution
     prompt = CODE_GENERATION_TEMPLATE.format(

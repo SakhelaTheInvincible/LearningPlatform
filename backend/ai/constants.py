@@ -142,13 +142,13 @@ Please provide both the score (0-100) and a specific, detailed hint about the so
 """
 
 CODE_GENERATION_TEMPLATE = """
-Generate {num_codes} coding challenges for {programming_language}.
+Generate {num_codes} coding challenges for each difficulty level: {difficulties} for {programming_language}.
 
 Requirements:
 1. Each challenge must be practical and testable
 2. Include edge cases and error handling
 3. Focus on real-world applications
-4. Vary complexity across {difficulties}
+5. Strictly generate {num_codes} challenges for each difficulty level
 
 Format each challenge as:
 Problem Statement: [Clear, specific task]

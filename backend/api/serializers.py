@@ -83,7 +83,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['username', 'email',
-                  'first_name', 'last_name', 'profile_picture']
+                  'first_name', 'last_name', 'profile_picture', 'user_exp']
     # def validate_username(self, value):
     #     if User.objects.exists(username=value):
     #         raise serializers.ValidationError("Username already exists!")
@@ -303,7 +303,7 @@ class CourseListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = ['id', 'title', 'title_slug', 'duration_weeks', 'description',
-                  'image', 'is_completed']
+                  'image', 'is_completed', 'difficulty']
 
 
 

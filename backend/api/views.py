@@ -24,7 +24,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.shortcuts import get_object_or_404
 import os
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import Q, Count
 
 from api.pagination import StandardResultsSetPagination
 from rest_framework import mixins, viewsets
@@ -305,6 +305,53 @@ class CourseViewSet(mixins.CreateModelMixin,
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @action(detail=True, methods=['PUT'], url_path='set_is_completed')
+    def set_is_completed(self, request, *args, **kwargs):
+        try:
+            is_completed = request.data.get('is_completed')
+            if is_completed is None:
+                return Response({'error': 'is_completed is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Accept boolean or string values
+            if isinstance(is_completed, str):
+                if is_completed.lower() == 'true':
+                    is_completed = True
+                elif is_completed.lower() == 'false':
+                    is_completed = False
+                else:
+                    return Response({'error': "is_completed string must be 'true' or 'false'"}, status=status.HTTP_400_BAD_REQUEST)
+            elif not isinstance(is_completed, bool):
+                return Response({'error': 'is_completed must be a boolean or string'}, status=status.HTTP_400_BAD_REQUEST)
+
+            course = self.get_object()
+            was_completed = course.is_completed
+            course.is_completed = is_completed
+            course.save()
+
+            # Update user_exp if course is newly completed
+            if is_completed and not was_completed:
+                user = request.user
+                exp_gain = 0
+                if course.difficulty == 'E':
+                    exp_gain = 150
+                elif course.difficulty == 'M':
+                    exp_gain = 250
+                elif course.difficulty == 'H':
+                    exp_gain = 500
+
+                if exp_gain > 0:
+                    user.user_exp += exp_gain
+                    user.save(update_fields=['user_exp'])
+                    return Response({
+                        'message': 'Course completed and user experience updated.',
+                        'is_completed': course.is_completed,
+                        'exp_gain': exp_gain
+                    }, status=status.HTTP_200_OK)
+
+            return Response({'message': 'is_completed updated successfully', 'is_completed': course.is_completed}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 # ====================#
 
 
@@ -365,6 +412,35 @@ class WeekViewSet(mixins.CreateModelMixin,
 
         self.check_object_permissions(self.request, obj)
         return obj
+
+    @action(detail=True, methods=['PUT'], url_path='set_is_completed')
+    def set_is_completed(self, request, *args, **kwargs):
+        try:
+            is_completed = request.data.get('is_completed')
+            if is_completed is None:
+                return Response({'error': 'is_completed is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Accept boolean or string values
+            if isinstance(is_completed, bool):
+                pass
+            elif isinstance(is_completed, str):
+                if is_completed.lower() == 'true':
+                    is_completed = True
+                elif is_completed.lower() == 'false':
+                    is_completed = False
+                else:
+                    return Response({'error': "is_completed string must be 'true' or 'false'"}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response({'error': 'is_completed must be a boolean or string'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Get the week instance
+            week = self.get_object()
+            week.is_completed = is_completed
+            week.save()
+
+            return Response({'message': 'is_completed updated successfully', 'is_completed': week.is_completed}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 # ====================#
@@ -465,6 +541,17 @@ class MaterialViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
                 week=week
             )
             print("Material record created successfully")
+
+            course = week.course
+            weeks_with_materials = course.weeks.annotate(
+                num_materials=Count('materials')
+            ).filter(num_materials__gt=0).count()
+
+            if course.weeks.count() == course.duration_weeks and weeks_with_materials == course.duration_weeks:
+                print("All materials for all weeks are uploaded. Updating course difficulty.")
+                course.update_difficulty()
+                print(
+                    f"Course difficulty updated to: {course.get_difficulty_display()}")
 
             headers = self.get_success_headers(serializer.data)
             return Response(

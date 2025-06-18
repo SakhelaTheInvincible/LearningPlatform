@@ -61,18 +61,27 @@ class Course(models.Model):
         ('H', 'Hard'),
     ]
     
-    difficulty = models.CharField(max_length=1, choices=DIFFICULTY_CHOICES)
+    difficulty = models.CharField(max_length=1, choices=DIFFICULTY_CHOICES, blank=True, null=True)
+
+    def update_difficulty(self):
+        total_word_count = 0
+        for week in self.weeks.prefetch_related('materials'):
+            for material in week.materials.all():
+                if material.summarized_material:
+                    total_word_count += len(material.summarized_material.split())
+        
+        if total_word_count < 2000:
+            self.difficulty = 'E'
+        elif 2000 <= total_word_count < 10000:
+            self.difficulty = 'M'
+        else:
+            self.difficulty = 'H'
+        self.save(update_fields=['difficulty'])
 
     def delete(self, *args, **kwargs):
         if self.image:
             self.image.delete(save=False)
         super().delete(*args, kwargs)
-
-    # class Meta:
-    #     ordering = ['title']
-    #     indexes = [
-    #         models.Index(fields=['title']),
-    #     ]
 
     def save(self, *args, **kwargs):
         if not self.pk:
@@ -81,6 +90,9 @@ class Course(models.Model):
             return super().save(update_fields=['title_slug'])
         else:
             self.title_slug = f'{slugify(self.title)}-{self.pk}'
+            # to prevent recursion from update_difficulty
+            if kwargs.get('update_fields') == ['difficulty']:
+                return super().save(*args, **kwargs)
             return super().save(update_fields=['title_slug'])
 
     def __str__(self):
