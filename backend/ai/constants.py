@@ -151,6 +151,9 @@ Requirements:
 2. Include edge cases and error handling
 3. Focus on real-world applications
 5. Strictly generate {num_codes} challenges for each difficulty level
+6. In description, when you mention function name, classes, attributes, etc.., wrap them in `(for example: `self.name`). 
+Also wrap titles if any with * (like *amazing*). 
+7. Make some sections like Description, Requirements, Input, Output, etc... (Do not wrap them with anything, just make them in New Line)
 
 Format each challenge as:
 Problem Statement: [Clear, specific task]

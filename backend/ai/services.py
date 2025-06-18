@@ -385,7 +385,7 @@ def parse_code_lines(response_text):
                 "H": "H"
             }
             # Default to Medium if not found
-            difficulty = difficulty_map.get(difficulty.strip(), "M")
+            difficulty = difficulty_map.get(difficulty.strip()[0], "M")
 
             codes.append({
                 "difficulty": difficulty,
