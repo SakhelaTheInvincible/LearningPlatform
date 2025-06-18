@@ -61,7 +61,7 @@ class Course(models.Model):
         ('H', 'Hard'),
     ]
     
-    difficulty = models.CharField(max_length=1, choices=DIFFICULTY_CHOICES, blank=True, null=True)
+    difficulty = models.CharField(max_length=1, choices=DIFFICULTY_CHOICES, default="E")
 
     def update_difficulty(self):
         total_word_count = 0

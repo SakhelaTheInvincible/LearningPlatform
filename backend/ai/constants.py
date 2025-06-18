@@ -144,6 +144,8 @@ Please provide both the score (0-100) and a specific, detailed hint about the so
 CODE_GENERATION_TEMPLATE = """
 Generate {num_codes} coding challenges for each difficulty level: {difficulties} for {programming_language}.
 
+(E difficulty means Easy, M difficulty means Medium, H difficulty means Hard)
+
 Requirements:
 1. Each challenge must be practical and testable
 2. Include edge cases and error handling
@@ -155,6 +157,8 @@ Problem Statement: [Clear, specific task]
 Solution: [Complete, working code]
 Template: [Starter code with TODO]
 Difficulty: [One of: {difficulties}]
+
+(Output difficulty onlt as it is: E|M|H)
 
 Separate challenges with '=============='
 
@@ -174,7 +178,7 @@ Class Solution:
    def validate_email(self, email):
       # TODO: Implement email validation
       pass
-Difficulty: Easy
+Difficulty: E
 ==============
 """
 

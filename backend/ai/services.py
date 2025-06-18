@@ -287,7 +287,12 @@ def compare_coding_solutions(problem_statement: str, solution: str, user_solutio
 
 def parse_code_lines(response_text):
     codes = []
-    challenge_blocks = response_text.strip().split('---')
+    # Split on both ==== and --- to handle different AI output formats
+    challenge_blocks = response_text.strip().split('==============')
+    
+    # If no ==== found, try ---
+    if len(challenge_blocks) == 1:
+        challenge_blocks = response_text.strip().split('---')
 
     for block in challenge_blocks:
         block = block.strip()
@@ -295,7 +300,7 @@ def parse_code_lines(response_text):
             continue
 
         try:
-            print(block)
+            print(f"Processing block: {block}...")
             # Extract sections using markers
             problem_statement = ""
             solution = ""
@@ -305,56 +310,82 @@ def parse_code_lines(response_text):
             # Find problem statement
             if "Problem Statement" in block:
                 problem_start = block.find("Problem Statement")
-                problem_end = block.find(
-                    "Solution") if "Solution" in block else len(block)
-                problem_statement = block[problem_start:problem_end].replace(
-                    "Problem Statement:", "").strip()
+                # Look for next section marker
+                next_section = min(
+                    block.find("Solution") if "Solution" in block else len(block),
+                    block.find("**Solution**") if "**Solution**" in block else len(block)
+                )
+                problem_statement = block[problem_start:next_section].replace(
+                    "Problem Statement:", "").replace("**Problem Statement**:", "").strip()
 
             # Find solution
             if "Solution" in block:
                 solution_start = block.find("Solution")
-                solution_end = block.find(
-                    "Template") if "Template" in block else len(block)
-                solution = block[solution_start:solution_end].replace(
-                    "Solution:", "").strip()
+                if solution_start == -1:
+                    solution_start = block.find("**Solution**")
+                
+                # Look for next section marker
+                next_section = min(
+                    block.find("Template") if "Template" in block else len(block),
+                    block.find("**Template**") if "**Template**" in block else len(block)
+                )
+                solution = block[solution_start:next_section].replace(
+                    "Solution:", "").replace("**Solution**:", "").strip()
                 # Extract code from solution
                 if "```" in solution:
                     code_start = solution.find("```") + 3
                     code_end = solution.rfind("```")
-                    solution = solution[code_start:code_end].strip()
+                    if code_end > code_start:
+                        solution = solution[code_start:code_end].strip()
 
             # Find template
             if "Template" in block:
                 template_start = block.find("Template")
-                template_end = block.find(
-                    "Difficulty") if "Difficulty" in block else len(block)
-                template_code = block[template_start:template_end].replace(
-                    "Template:", "").strip()
+                if template_start == -1:
+                    template_start = block.find("**Template**")
+                
+                # Look for next section marker
+                next_section = min(
+                    block.find("Difficulty") if "Difficulty" in block else len(block),
+                    block.find("**Difficulty**") if "**Difficulty**" in block else len(block)
+                )
+                template_code = block[template_start:next_section].replace(
+                    "Template:", "").replace("**Template**:", "").strip()
                 # Extract code from template
                 if "```" in template_code:
                     code_start = template_code.find("```") + 3
                     code_end = template_code.rfind("```")
-                    template_code = template_code[code_start:code_end].strip()
+                    if code_end > code_start:
+                        template_code = template_code[code_start:code_end].strip()
 
             # Find difficulty
             if "Difficulty" in block:
                 difficulty_start = block.find("Difficulty")
+                if difficulty_start == -1:
+                    difficulty_start = block.find("**Difficulty**")
                 difficulty = block[difficulty_start:].replace(
-                    "Difficulty:", "").strip()
+                    "Difficulty:", "").replace("**Difficulty**:", "").strip()
 
             # Validate required fields
             if not all([problem_statement, solution, template_code, difficulty]):
-                print(f"Skipping block with missing fields: {block}")
+                print(f"Skipping block with missing fields:")
+                print(f"  Problem: {bool(problem_statement)}")
+                print(f"  Solution: {bool(solution)}")
+                print(f"  Template: {bool(template_code)}")
+                print(f"  Difficulty: {bool(difficulty)}")
                 continue
 
-            # Map difficulty to our format
+            # Map difficulty to our format - handle both full words and abbreviations
             difficulty_map = {
                 "Easy": "E",
-                "Medium": "M",
-                "Hard": "H"
+                "Medium": "M", 
+                "Hard": "H",
+                "E": "E",
+                "M": "M",
+                "H": "H"
             }
             # Default to Medium if not found
-            difficulty = difficulty_map.get(difficulty, "M")
+            difficulty = difficulty_map.get(difficulty.strip(), "M")
 
             codes.append({
                 "difficulty": difficulty,
