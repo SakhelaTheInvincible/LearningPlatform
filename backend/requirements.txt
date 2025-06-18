@@ -35,10 +35,10 @@ django-storages==1.14.6
 django-cleanup==9.0.0
 django-debug-toolbar==5.2.0
 django-environ==0.12.0
-psycopg==3.1.18
+psycopg2-binary==2.9.10
 transformers==4.52.4
 tokenizers==0.21.1
 safetensors==0.5.3
-# torch==2.7.1+cu118
-# torchvision==0.22.1+cu118
-# torchaudio==2.7.1+cu118
+torch==2.7.1+cu118
+torchvision==0.22.1+cu118
+torchaudio==2.7.1+cu118

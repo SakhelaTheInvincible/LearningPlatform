@@ -376,7 +376,7 @@ class Code(models.Model):
     problem_statement = models.TextField()
     solution = models.TextField()
     template_code = models.TextField()
-    user_code = models.TextField()
+    user_code = models.TextField(default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     user_score = models.PositiveSmallIntegerField(

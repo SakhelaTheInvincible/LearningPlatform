@@ -21,9 +21,19 @@ export default function SignupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-
+  
     try {
       await api.post("/signup/", formData);
+  
+      // Immediately log in after signup
+      const loginRes = await api.post("/token/", {
+        username: formData.username,
+        password: formData.password,
+      });
+  
+      localStorage.setItem("access", loginRes.data.access);
+      localStorage.setItem("refresh", loginRes.data.refresh);
+  
       router.push("/courses");
     } catch (err: any) {
       setError(err.response?.data?.detail || "Signup failed");

@@ -26,7 +26,13 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const access = localStorage.getItem("access");
-    if (access) {
+    // Don't send token for signup or token endpoints
+    if (
+      access &&
+      config.url &&
+      !config.url.includes("/signup") &&
+      !config.url.includes("/token")
+    ) {
       config.headers["Authorization"] = `Bearer ${access}`;
     }
     return config;
