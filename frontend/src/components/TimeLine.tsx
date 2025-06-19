@@ -1,94 +1,148 @@
 "use client";
 
-import React, { JSX, useEffect } from "react";
+import React, { JSX, useEffect, useState } from "react";
 import {
   CalendarIcon,
   CheckCircleIcon,
   ClockIcon,
+  MinusCircleIcon,
 } from "@heroicons/react/24/outline";
 import { useParams } from "next/navigation";
 import api from "../lib/axios";
 
 type TimelineCheckpoint = {
   title: string;
-  date: string;
+  date?: string;
   icon: JSX.Element;
+  completed?: boolean;
+};
+
+type WeekData = {
+  week_number: number;
+  is_completed: boolean;
+  updated_at: string;
+  materials: { title: string }[];
 };
 
 type CourseTimelineProps = {
-  startDate: string; // Start date of the course
-  weeks: number; // Total number of weeks
-  timePerWeek: number; // Estimated time per week (in days or weeks, depending on your system)
+  startDate: string;
+  weeks: number;
+  timePerWeek: number;
 };
 
 const Timeline = ({ startDate, weeks, timePerWeek }: CourseTimelineProps) => {
   const params = useParams();
   const slug = params?.slug as string;
-  const weekNumber = parseInt(params?.weekNumber as string);
-  // Calculate the estimated end date
-  const start = new Date(startDate);
-  const end = new Date(start);
-  end.setDate(start.getDate() + weeks * timePerWeek); // Adjust end date based on weeks
 
-  const checkpoints: TimelineCheckpoint[] = [
-    {
-      title: "Course Start",
-      date: startDate,
-      icon: <CalendarIcon className="h-6 w-6 " />,
-    },
-  ];
+  const [checkpoints, setCheckpoints] = useState<TimelineCheckpoint[]>([]);
+
   useEffect(() => {
-    async function fetchSidebar() {
+    async function fetchTimeline() {
       try {
-        const res = await api.get(`/courses/${slug}/get_completions/`);
-        const data = res.data;
-        console.log(data);
+        const res = await api.get(`/courses/${slug}`);
+        const startDate = res.data.created_at;
+        const weekData: WeekData[] = res.data.weeks;
+
+        const allWeeksCompleted =
+          weekData.length === weeks &&
+          weekData.every((week) => week.is_completed);
+
+        let latestUpdate: Date | null = null;
+        if (allWeeksCompleted) {
+          latestUpdate = weekData.reduce((latest, week) => {
+            const updated = new Date(week.updated_at);
+            return updated > latest ? updated : latest;
+          }, new Date(weekData[0].updated_at));
+        }
+
+        const timeline: TimelineCheckpoint[] = [
+          {
+            title: "Course Start",
+            date: new Date(startDate).toDateString(),
+            icon: <CalendarIcon className="h-5 w-5 text-green-600" />,
+            completed: true,
+          },
+        ];
+
+        for (let i = 1; i <= weeks; i++) {
+          const week = weekData.find((w) => w.week_number === i);
+
+          if (week?.is_completed) {
+            timeline.push({
+              title: `Week ${i}`,
+              date: new Date(week.updated_at).toDateString(),
+              icon: <CheckCircleIcon className="h-5 w-5 text-green-600" />,
+              completed: true,
+            });
+          } else {
+            timeline.push({
+              title: `Week ${i}`,
+              date: "Not finished",
+              icon: <MinusCircleIcon className="h-5 w-5 text-indigo-600" />,
+              completed: false,
+            });
+          }
+        }
+
+        timeline.push({
+          title: "Course End",
+          date:
+            allWeeksCompleted && latestUpdate
+              ? latestUpdate.toDateString()
+              : "Not finished",
+          icon: (
+            <ClockIcon
+              className={`h-5 w-5 ${
+                allWeeksCompleted ? "text-green-600" : "text-indigo-600"
+              }`}
+            />
+          ),
+          completed: allWeeksCompleted,
+        });
+
+        setCheckpoints(timeline);
       } catch (error) {
-        console.error("Failed to load sidebar:", error);
+        console.error("Failed to load timeline:", error);
       }
     }
-    fetchSidebar();
-  }, []);
 
-  // Add checkpoints for each week
-  for (let i = 1; i <= weeks; i++) {
-    const weekStart = new Date(start);
-    weekStart.setDate(start.getDate() + i * timePerWeek); // Adjust each week's start date
-    checkpoints.push({
-      title: `Week ${i}`,
-      date: weekStart.toDateString(),
-      icon: <CheckCircleIcon className="h-6 w-6" />,
-    });
-  }
-
-  // Add estimated end date as final checkpoint
-  checkpoints.push({
-    title: "Estimated End",
-    date: end.toDateString(),
-    icon: <ClockIcon className="h-6 w-6" />,
-  });
+    fetchTimeline();
+  }, [slug, startDate, weeks, timePerWeek]);
 
   return (
-    <div className="w-72 shadow-lg p-4 rounded-lg space-y-4">
-      <h2 className="text-xl font-semibold">Course Timeline</h2>
+    <div className="w-80 border border-indigo-500 bg-white shadow-md rounded-xl p-6 space-y-6">
+      <div>
+        <h2 className="text-xl text-gray-800">Course Timeline</h2>
+        <hr className="mt-2 border-indigo-500" />
+      </div>
 
       <div className="relative">
-        <div className="absolute left-[15px]  w-1 h-full border border-1 border-transparent border-l-indigo-600 border-dashed h-full"></div>
+        <div className="absolute left-[15px] top-0 bottom-0 w-0.5 bg-indigo-300 border-dashed border-l-2 z-0" />
 
-        <div className="space-y-4">
+        <div className="space-y-6 relative z-10">
           {checkpoints.map((checkpoint, index) => (
-            <div key={index} className="relative flex items-center">
-              {/* Icon */}
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-600 text-white">
+            <div key={index} className="relative flex items-start space-x-4">
+              <div
+                className={`flex items-center justify-center w-8 h-8 rounded-full shadow-sm ring-1 ring-white ${
+                  checkpoint.completed ? "bg-green-100" : "bg-indigo-100"
+                }`}
+              >
                 {checkpoint.icon}
               </div>
 
-              {/* Checkpoint Info */}
-              <div className="ml-12">
-                <p className="font-medium text-indigo-600">
+              <div>
+                <p
+                  className={`text-sm font-medium ${
+                    checkpoint.completed ? "text-green-600" : "text-indigo-600"
+                  }`}
+                >
                   {checkpoint.title}
                 </p>
-                <p className="text-sm text-gray-600">{checkpoint.date}</p>
+                {checkpoint.date && (
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {checkpoint.date}
+                  </p>
+                )}
               </div>
             </div>
           ))}

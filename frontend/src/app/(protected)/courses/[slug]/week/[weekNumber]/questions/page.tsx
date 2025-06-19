@@ -48,6 +48,7 @@ interface Part {
 
 export default function WeekQuestions() {
   const [completedQuestions, setCompletedQuestions] = useState(false);
+  const [showRequirements, setShowRequirements] = useState(false);
   const [parts, setParts] = useState<Part[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
@@ -560,6 +561,24 @@ export default function WeekQuestions() {
                           <span className="text-indigo-900">
                             {quiz.user_score}%
                           </span>
+                        </div>
+                      )}
+                      {/* Requirement message */}
+                      <button
+                        onClick={() => setShowRequirements((prev) => !prev)}
+                        className="text-sm text-indigo-700 hover:cursor-pointer"
+                      >
+                        {showRequirements
+                          ? "Hide requirements"
+                          : "Show requirements"}
+                      </button>
+                      {showRequirements && (
+                        <div className="text-center mt-4 text-sm text-gray-600 max-w-md mx-auto px-2">
+                          To complete this section, you must pass the quiz at{" "}
+                          <span className="font-medium text-indigo-700">
+                            Intermediate
+                          </span>{" "}
+                          difficulty or higher.
                         </div>
                       )}
                     </div>

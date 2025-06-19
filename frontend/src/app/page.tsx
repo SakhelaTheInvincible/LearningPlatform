@@ -49,7 +49,6 @@ export default function Home() {
                   Home
                 </Link>
                 <Link href="/courses">Courses</Link>
-                <Link href="/about">About</Link>
               </nav>
             </div>
           </header>

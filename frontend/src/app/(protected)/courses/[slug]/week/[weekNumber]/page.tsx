@@ -49,6 +49,9 @@ export default function WeekLearning() {
   useEffect(() => {
     async function fetchCourse() {
       try {
+        const res5 = await api.get(`/courses/${slug}/weeks/${weekNumber}/`);
+        console.log(res5.data);
+
         const res = await api.get(`/courses/${slug}`);
         const data = res.data;
 

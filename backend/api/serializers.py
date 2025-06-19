@@ -246,7 +246,7 @@ class WeekSerializer(serializers.ModelSerializer):
     class Meta:
         model = Week
         # fields = ['week_number', 'materials', 'quizzes', 'is_completed']
-        fields = ['week_number', 'materials', 'is_completed']
+        fields = ['week_number', 'materials', 'is_completed', 'updated_at', 'created_at']
 
 
 class WeekRetrieveSerializer(serializers.ModelSerializer):
@@ -256,7 +256,7 @@ class WeekRetrieveSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Week
-        fields = ['week_number', 'materials']
+        fields = ['week_number', 'materials', 'is_completed', 'updated_at', 'created_at']
 
 
 class WeekCreateSerializer(serializers.ModelSerializer):
@@ -275,7 +275,7 @@ class CourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = ['title', 'description', 'image',
-                  'duration_weeks', 'weeks', 'language', 'is_completed']
+                  'duration_weeks', 'weeks', 'language', 'is_completed', 'created_at']
 
 
 class CourseRetrieveSerializer(serializers.ModelSerializer):
@@ -284,7 +284,7 @@ class CourseRetrieveSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = ['title', 'description', 'image',
-                  'duration_weeks', 'weeks', 'language', 'is_completed']
+                  'duration_weeks', 'weeks', 'language', 'is_completed', 'created_at']
 
 
 class CourseCreateSerializer(serializers.ModelSerializer):

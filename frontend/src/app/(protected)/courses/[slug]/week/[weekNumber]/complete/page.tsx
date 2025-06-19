@@ -149,7 +149,7 @@ export default function WeekReading() {
     fetchSidebar();
   }, []);
 
-  const finishWeek = () => {
+  const finishWeek = async () => {
     const { material_read, quiz_completed, code_completed } = completionDetails;
 
     const allComplete =
@@ -157,6 +157,9 @@ export default function WeekReading() {
 
     if (allComplete) {
       const new_weekNumber = weekNumber + 1;
+      await api.put(`/courses/${slug}/weeks/${weekNumber}/set_is_completed/`, {
+        is_completed: true,
+      });
       if (new_weekNumber > duration) {
         router.push(`/courses/${slug}`);
       } else {
