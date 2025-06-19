@@ -86,7 +86,11 @@ export default function CoursePage({ slug }: { slug: string }) {
       <div className="relative bg-gray-200 h-[400px] flex items-center justify-start pl-[130px]">
         <div className="max-w-[200px] mb-[220px]">
           <Image
-            src={course.image}
+            src={
+              course.image && course.image.trim() !== ""
+                ? course.image
+                : "/courses/default-course-thumbnail.png"
+            }
             alt={course.title}
             width={200}
             height={100}

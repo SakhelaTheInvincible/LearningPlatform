@@ -4,6 +4,7 @@ import { useRef, useState, useEffect, JSX } from "react";
 import LeetCodeEditor from "@/src/components/LeetCodeEditor";
 import api from "@/src/lib/axios";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 
 interface Code {
   difficulty_display: string;
@@ -42,6 +43,7 @@ export default function EditorLayout() {
     hint: string;
   } | null>(null);
   const [userScore, setUserScore] = useState(0);
+  const [language, setLanguage] = useState("javascript");
 
   const params = useParams();
   const slug = params?.slug as string;
@@ -152,6 +154,12 @@ export default function EditorLayout() {
   useEffect(() => {
     async function fetchCode() {
       try {
+        const res1 = await api.get(`/courses/${slug}`);
+        if (res1) {
+          setLanguage(res1.data.language);
+        }
+        console.log(res1.data);
+
         const res = await api.get(
           `/courses/${slug}/weeks/${weekNumber}/codes/${taskNumber}`
         );
@@ -295,27 +303,51 @@ export default function EditorLayout() {
         onClick={() => setActivePanel("left")}
       >
         {/* Tabs */}
-        <div className="flex space-x-4 border-b border-gray-700 mb-4">
-          <button
-            className={`py-2 text-sm font-medium ${
-              activeTab === "description"
-                ? "border-b-2 border-indigo-500 text-indigo-400"
-                : "text-gray-400"
-            }`}
-            onClick={() => setActiveTab("description")}
-          >
-            Description
-          </button>
-          <button
-            className={`py-2 text-sm font-medium ${
-              activeTab === "submissions"
-                ? "border-b-2 border-indigo-500 text-indigo-400"
-                : "text-gray-400"
-            }`}
-            onClick={() => setActiveTab("submissions")}
-          >
-            Submissions
-          </button>
+        <div className="flex flex-row justify-between border-b border-gray-700 mb-4">
+          <div className="flex space-x-4">
+            <button
+              className={`py-2 text-sm font-medium ${
+                activeTab === "description"
+                  ? "border-b-2 border-indigo-500 text-indigo-400"
+                  : "text-gray-400"
+              }`}
+              onClick={() => setActiveTab("description")}
+            >
+              Description
+            </button>
+            <button
+              className={`py-2 text-sm font-medium ${
+                activeTab === "submissions"
+                  ? "border-b-2 border-indigo-500 text-indigo-400"
+                  : "text-gray-400"
+              }`}
+              onClick={() => setActiveTab("submissions")}
+            >
+              Submissions
+            </button>
+          </div>
+          <div className="flex">
+            <Link
+              href={`/courses/${slug}/week/${weekNumber}/coding`}
+              title="Go back to coding tasks"
+              className="py-2 text-sm font-medium hover:text-indigo-500 text-gray-400"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="size-5"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M7.49 12 3.74 8.248m0 0 3.75-3.75m-3.75 3.75h16.5V19.5"
+                />
+              </svg>
+            </Link>
+          </div>
         </div>
 
         {/* Tab Content */}
@@ -383,6 +415,7 @@ export default function EditorLayout() {
               problem_statement={codeData.problem?.problem_statement}
               solution={codeData.problem?.solution}
               onEvaluate={evaluateSolution}
+              language={language}
             />
           ) : (
             <div className="text-white p-4">Loading editor...</div>

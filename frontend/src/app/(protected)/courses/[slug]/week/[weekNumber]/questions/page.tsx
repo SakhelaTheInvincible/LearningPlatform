@@ -1,10 +1,10 @@
 "use client";
 import Header from "@/src/components/Header";
-import WeekMenu from "@/src/components/weekMenu";
+import WeekMenu, { WeekMenuHandle } from "@/src/components/weekMenu";
 import Breadcrumbs from "@/src/components/Breadcrumbs";
 import MultipleChoiceQuestion from "@/src/components/MultipleChoicQuestion";
 import OpenEndedQuestion from "@/src/components/OpenEndedQuestion";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import api from "@/src/lib/axios";
 import ChoiceQuestion from "@/src/components/ChoiceQuestion";
@@ -38,7 +38,17 @@ const difficultyLabels: Record<(typeof difficultyOrder)[number], string> = {
 };
 type Difficulty = (typeof difficultyOrder)[number];
 
+interface Part {
+  name: string;
+  type: "reading" | "questions" | "coding" | "complete";
+  slug: string;
+  description: string;
+  completed: boolean;
+}
+
 export default function WeekQuestions() {
+  const [completedQuestions, setCompletedQuestions] = useState(false);
+  const [parts, setParts] = useState<Part[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const params = useParams();
@@ -71,6 +81,7 @@ export default function WeekQuestions() {
     null
   );
   const [showExplanations, setShowExplanations] = useState(true);
+  const menuRef = useRef<WeekMenuHandle>(null);
 
   function getHigherDifficulty(current: Difficulty): Difficulty {
     const index = difficultyOrder.indexOf(current);
@@ -200,6 +211,83 @@ export default function WeekQuestions() {
       console.error("Failed to save score:", err);
     }
   };
+  useEffect(() => {
+    async function fetchSidebar() {
+      try {
+        const res = await api.get(
+          `/courses/${slug}/weeks/${weekNumber}/get_completion/`
+        );
+        const data = res.data;
+        console.log(data);
+        const res1 = await api.get(
+          `/courses/${slug}/weeks/${weekNumber}/codes/`
+        );
+        const data1 = res1.data;
+        if (data1.length != 0) {
+          setParts([
+            {
+              name: "Reading Material",
+              type: "reading",
+              slug: "reading",
+              description: `Learning material`,
+              completed: data.material_read,
+            },
+            {
+              name: "Quiz questions",
+              type: "questions",
+              slug: "questions",
+              description: "Answer quiz questions",
+              completed: data.quiz_completed,
+            },
+            {
+              name: "Coding Tasks",
+              type: "coding",
+              slug: "coding",
+              description: "Complete coding challanges",
+              completed: data.code_completed,
+            },
+            {
+              name: "Complete Tasks",
+              type: "complete",
+              slug: "complete",
+              description: "Finish this weeks materials",
+              completed:
+                data.material_read &&
+                data.quiz_completed &&
+                data.code_completed,
+            },
+          ]);
+        } else {
+          setParts([
+            {
+              name: "Reading Material",
+              type: "reading",
+              slug: "reading",
+              description: `Learning material`,
+              completed: data.material_read,
+            },
+            {
+              name: "Quiz questions",
+              type: "questions",
+              slug: "questions",
+              description: "Answer quiz questions",
+              completed: data.quiz_completed,
+            },
+            {
+              name: "Complete Tasks",
+              type: "complete",
+              slug: "complete",
+              description: "Finish this weeks materials",
+              completed: data.material_read && data.quiz_completed,
+            },
+          ]);
+        }
+      } catch (error) {
+        console.error("Failed to load sidebar:", error);
+      }
+    }
+    fetchSidebar();
+  }, []);
 
   useEffect(() => {
     async function fetchQuizzes() {
@@ -261,31 +349,7 @@ export default function WeekQuestions() {
       <div className="flex flex-col">
         <Header />
         <div className="flex flex-row justify-start mt-16 bg-white ">
-          <WeekMenu
-            parts={[
-              {
-                name: "Reading Material",
-                type: "reading",
-                slug: "reading",
-                description: "Reading - 5 min",
-                completed: false,
-              },
-              {
-                name: "Practice Questions",
-                type: "questions",
-                slug: "questions",
-                description: "quiz - 3 min",
-                completed: completedQuiz,
-              },
-              {
-                name: "Coding Exercise 1",
-                type: "coding",
-                slug: "coding",
-                description: "Practical Assesment - 30 min",
-                completed: false,
-              },
-            ]}
-          />
+          <WeekMenu ref={menuRef} parts={parts} />
           <div className="flex flex-row justify-start ml-8 mt-8">
             <div className="flex flex-col justify-start">
               <Breadcrumbs />
@@ -499,15 +563,25 @@ export default function WeekQuestions() {
                         </div>
                       )}
                     </div>
-                    <button
-                      className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 px-4 ml-2 rounded hover:cursor-pointer"
-                      onClick={async () => {
-                        await fetchCourse(quizDifficulty);
-                        setStartedQuiz(true);
-                      }}
-                    >
-                      start the quiz
-                    </button>
+                    <div className="flex flex-row justify-between">
+                      <button
+                        className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 px-4 ml-2 rounded hover:cursor-pointer"
+                        onClick={async () => {
+                          await fetchCourse(quizDifficulty);
+                          setStartedQuiz(true);
+                        }}
+                      >
+                        start the quiz
+                      </button>
+                      <button
+                        className="hover:bg-indigo-500 bg-indigo-600 text-white p-2 rounded hover:cursor-pointer"
+                        onClick={() => {
+                          menuRef.current?.goToNextPart();
+                        }}
+                      >
+                        Move to the next section
+                      </button>
+                    </div>
                   </div>
                 )}
 

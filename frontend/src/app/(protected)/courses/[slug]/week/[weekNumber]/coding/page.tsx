@@ -1,8 +1,8 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import CodeEditor from "@/src/components/CodeEditor";
 import Header from "@/src/components/Header";
-import WeekMenu from "@/src/components/weekMenu";
+import WeekMenu, { WeekMenuHandle } from "@/src/components/weekMenu";
 import Breadcrumbs from "@/src/components/Breadcrumbs";
 import LeetCodeEditor from "@/src/components/LeetCodeEditor";
 import EditorLayout from "@/src/components/EditorLayout";
@@ -19,11 +19,21 @@ interface Code {
   user_code: string;
   user_score: number;
 }
+interface Part {
+  name: string;
+  type: "reading" | "questions" | "coding" | "complete";
+  slug: string;
+  description: string;
+  completed: boolean;
+}
 
 export default function Week1Coding() {
+  const [completedCoding, setCompletedCoding] = useState(false);
+  const [parts, setParts] = useState<Part[]>([]);
   const [output, setOutput] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [codeTasks, setCodeTasks] = useState<Code[]>([]);
+  const menuRef = useRef<WeekMenuHandle>(null);
 
   const params = useParams();
   const slug = params?.slug as string;
@@ -53,6 +63,83 @@ console.log('Hello, World!');`;
       setOutput(""); // Clear output when there is an error
     }
   };
+  useEffect(() => {
+    async function fetchSidebar() {
+      try {
+        const res = await api.get(
+          `/courses/${slug}/weeks/${weekNumber}/get_completion/`
+        );
+        const data = res.data;
+        console.log(data);
+        const res1 = await api.get(
+          `/courses/${slug}/weeks/${weekNumber}/codes/`
+        );
+        const data1 = res1.data;
+        if (data1.length != 0) {
+          setParts([
+            {
+              name: "Reading Material",
+              type: "reading",
+              slug: "reading",
+              description: `Learning material`,
+              completed: data.material_read,
+            },
+            {
+              name: "Quiz questions",
+              type: "questions",
+              slug: "questions",
+              description: "Answer quiz questions",
+              completed: data.quiz_completed,
+            },
+            {
+              name: "Coding Tasks",
+              type: "coding",
+              slug: "coding",
+              description: "Complete coding challanges",
+              completed: data.code_completed,
+            },
+            {
+              name: "Complete Tasks",
+              type: "complete",
+              slug: "complete",
+              description: "Finish this weeks materials",
+              completed:
+                data.material_read &&
+                data.quiz_completed &&
+                data.code_completed,
+            },
+          ]);
+        } else {
+          setParts([
+            {
+              name: "Reading Material",
+              type: "reading",
+              slug: "reading",
+              description: `Learning material`,
+              completed: data.material_read,
+            },
+            {
+              name: "Quiz questions",
+              type: "questions",
+              slug: "questions",
+              description: "Answer quiz questions",
+              completed: data.quiz_completed,
+            },
+            {
+              name: "Complete Tasks",
+              type: "complete",
+              slug: "complete",
+              description: "Finish this weeks materials",
+              completed: data.material_read && data.quiz_completed,
+            },
+          ]);
+        }
+      } catch (error) {
+        console.error("Failed to load sidebar:", error);
+      }
+    }
+    fetchSidebar();
+  }, []);
 
   useEffect(() => {
     async function fetchCode() {
@@ -79,31 +166,7 @@ console.log('Hello, World!');`;
       <div className="flex flex-col">
         <Header />
         <div className="flex flex-row justify-start mt-16 bg-white ">
-          <WeekMenu
-            parts={[
-              {
-                name: "Reading Material",
-                type: "reading",
-                slug: "reading",
-                description: "Reading - 5 min",
-                completed: false,
-              },
-              {
-                name: "Practice Questions",
-                type: "questions",
-                slug: "questions",
-                description: "quiz - 3 min",
-                completed: false,
-              },
-              {
-                name: "Coding Exercise 1",
-                type: "coding",
-                slug: "coding",
-                description: "Practical Assesment - 30 min",
-                completed: false,
-              },
-            ]}
-          />
+          <WeekMenu ref={menuRef} parts={parts} />
           <div className="flex flex-row justify-start ml-8 mt-8">
             <div className="flex flex-col justify-start">
               <Breadcrumbs />
@@ -145,6 +208,14 @@ console.log('Hello, World!');`;
                       />
                     ))}
                   </div>
+                  <button
+                    className="hover:bg-indigo-500 bg-indigo-600 text-white p-2 rounded hover:cursor-pointer"
+                    onClick={() => {
+                      menuRef.current?.goToNextPart();
+                    }}
+                  >
+                    Complete coding challanges
+                  </button>
                 </div>
               </div>
             </div>

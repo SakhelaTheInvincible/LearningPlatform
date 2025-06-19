@@ -30,6 +30,7 @@ export default function ProfilePage() {
   });
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -37,6 +38,7 @@ export default function ProfilePage() {
       try {
         const res = await api.get("/users/me/");
         setUser(res.data);
+        console.log(res.data);
       } catch (err: any) {
         setError("Failed to load user profile");
         router.replace("/login");
@@ -45,6 +47,24 @@ export default function ProfilePage() {
       }
     };
     fetchUser();
+  }, []);
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get("/admin/users/");
+      if (res) {
+        setIsAdmin(true);
+      }
+    } catch (err) {
+      setIsAdmin(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
   }, []);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -196,11 +216,16 @@ export default function ProfilePage() {
                 Change Password
               </button>
 
-              <div className="mt-4 text-sm">
-                <Link href="/admin" className="text-indigo-600 hover:underline">
-                  Go to Admin Page
-                </Link>
-              </div>
+              {isAdmin && (
+                <div className="mt-4 text-sm">
+                  <Link
+                    href="/admin"
+                    className="text-indigo-600 hover:underline"
+                  >
+                    Go to Admin Page
+                  </Link>
+                </div>
+              )}
 
               {/* Password Change Modal */}
               {showPasswordModal && (

@@ -28,7 +28,7 @@ interface Material {
 }
 interface Part {
   name: string;
-  type: "reading" | "questions" | "coding";
+  type: "reading" | "questions" | "coding" | "complete";
   slug: string;
   description: string;
   completed: boolean;
@@ -56,14 +56,44 @@ export default function WeekLearning() {
 
         const week = data.weeks?.find((w: any) => w.week_number === weekNumber);
 
+        const res2 = await api.get(
+          `/courses/${slug}/weeks/${weekNumber}/get_completion/`
+        );
+        const data2 = res2.data;
+        const res1 = await api.get(
+          `/courses/${slug}/weeks/${weekNumber}/codes/`
+        );
+        const data1 = res1.data;
+
         const parts: Part[] =
           week?.materials?.map((material: any, index: number) => ({
             name: material.title || `Part ${index + 1}`,
             type: "reading", // You can customize this if your material has a type
             slug: material.slug || `reading`,
-            description: `Part ${index + 1} - 5 min`,
-            completed: false,
+            description: `Learning material`,
+            completed: data2.material_read,
           })) || [];
+
+        console.log(data1);
+        if (parts.length != 0) {
+          parts.push({
+            name: "Quiz questions",
+            type: "questions",
+            slug: "questions",
+            description: "Answer quiz questions",
+            completed: data2.quiz_completed,
+          });
+        }
+
+        if (data1.length != 0) {
+          parts.push({
+            name: "Coding Tasks",
+            type: "coding",
+            slug: "coding",
+            description: "Complete coding challanges",
+            completed: data2.code_completed,
+          });
+        }
 
         const transformed: CourseInfo = {
           title: data.title || "",
@@ -76,6 +106,7 @@ export default function WeekLearning() {
         };
 
         setCourse(transformed);
+        console.log(transformed);
       } catch (error) {
         console.error("Failed to load course:", error);
       } finally {
@@ -104,7 +135,11 @@ export default function WeekLearning() {
               <div className="">
                 <div className="mb-8">
                   <Image
-                    src={course.image}
+                    src={
+                      course.image && course.image.trim() !== ""
+                        ? course.image
+                        : "/courses/default-course-thumbnail.png"
+                    }
                     alt={course.title}
                     width={120}
                     height={120}

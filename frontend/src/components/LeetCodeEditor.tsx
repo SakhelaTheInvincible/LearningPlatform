@@ -25,6 +25,7 @@ export default function LeetCodeEditor({
   problem_statement,
   solution,
   onEvaluate,
+  language,
 }: {
   defaultCode?: string;
   onSubmit: (code: string, language: string) => void;
@@ -43,10 +44,13 @@ export default function LeetCodeEditor({
     user_solution: string;
     programming_language: string;
   }) => void;
+  language: string;
 }) {
   const [code, setCode] = useState(defaultCode);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState(languages[0]);
+  const [selectedLanguage, setSelectedLanguage] = useState(
+    languages.find((l) => l.name === language) || languages[0]
+  );
   const [showSavedMessage, setShowSavedMessage] = useState(false);
   const codeRef = useRef(code);
 
@@ -127,6 +131,10 @@ export default function LeetCodeEditor({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    console.log(selectedLanguage);
   }, []);
 
   return (

@@ -1,11 +1,13 @@
 "use client";
 
-import React, { JSX } from "react";
+import React, { JSX, useEffect } from "react";
 import {
   CalendarIcon,
   CheckCircleIcon,
   ClockIcon,
 } from "@heroicons/react/24/outline";
+import { useParams } from "next/navigation";
+import api from "../lib/axios";
 
 type TimelineCheckpoint = {
   title: string;
@@ -20,6 +22,9 @@ type CourseTimelineProps = {
 };
 
 const Timeline = ({ startDate, weeks, timePerWeek }: CourseTimelineProps) => {
+  const params = useParams();
+  const slug = params?.slug as string;
+  const weekNumber = parseInt(params?.weekNumber as string);
   // Calculate the estimated end date
   const start = new Date(startDate);
   const end = new Date(start);
@@ -32,6 +37,18 @@ const Timeline = ({ startDate, weeks, timePerWeek }: CourseTimelineProps) => {
       icon: <CalendarIcon className="h-6 w-6 " />,
     },
   ];
+  useEffect(() => {
+    async function fetchSidebar() {
+      try {
+        const res = await api.get(`/courses/${slug}/get_completions/`);
+        const data = res.data;
+        console.log(data);
+      } catch (error) {
+        console.error("Failed to load sidebar:", error);
+      }
+    }
+    fetchSidebar();
+  }, []);
 
   // Add checkpoints for each week
   for (let i = 1; i <= weeks; i++) {

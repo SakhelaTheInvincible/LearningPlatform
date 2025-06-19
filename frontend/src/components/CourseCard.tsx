@@ -26,7 +26,11 @@ const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
       >
         <div className="bg-white rounded-2xl shadow overflow-hidden transition-transform transform group-hover:scale-105 duration-300 ease-in-out cursor-pointer flex flex-col h-full">
           <Image
-            src={course.image || "/courses/default.jpg"}
+            src={
+              course.image && course.image.trim() !== ""
+                ? course.image
+                : "/courses/default-course-thumbnail.png"
+            }
             alt={course.title}
             width={400}
             height={200}
