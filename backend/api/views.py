@@ -351,6 +351,39 @@ class CourseViewSet(mixins.CreateModelMixin,
             return Response({'message': 'is_completed updated successfully', 'is_completed': course.is_completed}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=True, methods=['GET'], url_path='get_completions')
+    def get_completions(self, request, *args, **kwargs):
+        course = self.get_object()
+        result = []
+
+        for week in course.weeks.all().order_by('week_number'):
+            # Material read: all materials in the week are read
+            materials = week.materials.all()
+            material_read = all(m.is_read for m in materials) if materials.exists() else False
+
+            # Quiz completed: intermediate quiz score >= 80
+            quiz_completed = False
+            intermediate_quiz = week.quizzes.filter(difficulty='I').first()
+            if intermediate_quiz and intermediate_quiz.user_score >= 80:
+                quiz_completed = True
+
+            # Code completed: all easy (score >= 90) and all medium (score >= 75)
+            codes = week.codes.all()
+            easy_codes = codes.filter(difficulty='E')
+            medium_codes = codes.filter(difficulty='M')
+            easy_completed = all(c.user_score >= 90 for c in easy_codes) if easy_codes.exists() else False
+            medium_completed = all(c.user_score >= 75 for c in medium_codes) if medium_codes.exists() else False
+            code_completed = easy_completed and medium_completed
+
+            result.append({
+                'week_number': week.week_number,
+                'material_read': material_read,
+                'quiz_completed': quiz_completed,
+                'code_completed': code_completed,
+            })
+
+        return Response(result)
 
 # ====================#
 
@@ -442,6 +475,33 @@ class WeekViewSet(mixins.CreateModelMixin,
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=True, methods=['GET'], url_path='get_completion')
+    def get_completion(self, request, *args, **kwargs):
+        week = self.get_object()
+
+        # Material read: all materials in the week are read
+        materials = week.materials.all()
+        material_read = all(m.is_read for m in materials) if materials.exists() else False
+
+        # Quiz completed: intermediate quiz score >= 80
+        quiz_completed = False
+        intermediate_quiz = week.quizzes.filter(difficulty='I').first()
+        if intermediate_quiz and intermediate_quiz.user_score >= 80:
+            quiz_completed = True
+
+        # Code completed: all easy (score >= 90) and all medium (score >= 75)
+        codes = week.codes.all()
+        easy_codes = codes.filter(difficulty='E')
+        medium_codes = codes.filter(difficulty='M')
+        easy_completed = all(c.user_score >= 90 for c in easy_codes) if easy_codes.exists() else False
+        medium_completed = all(c.user_score >= 75 for c in medium_codes) if medium_codes.exists() else False
+        code_completed = easy_completed and medium_completed
+
+        return Response({
+            'material_read': material_read,
+            'quiz_completed': quiz_completed,
+            'code_completed': code_completed,
+        })
 
 # ====================#
 
