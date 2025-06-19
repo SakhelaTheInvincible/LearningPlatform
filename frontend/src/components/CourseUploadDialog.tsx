@@ -93,6 +93,7 @@ export default function UploadCourseDialog({
     formData.append("material", material);
     formData.append("title", materialTitle);
     formData.append("description", materialDescription);
+    
     try {
       setIsLoading(true);
       setLoadingMessage("Uploading material...");
@@ -103,32 +104,36 @@ export default function UploadCourseDialog({
           headers: { "Content-Type": "multipart/form-data" },
         }
       );
-      setLoadingMessage("Generating quiz questions...");
-      await api.post(`/courses/${slug}/weeks/${selectedWeek}/questions/`);
-      setLoadingMessage("Creating quizes...");
-      await api.post(
+
+      // Start both question generation and code generation in parallel
+      setLoadingMessage("Generating quiz questions and coding challenges...");
+      
+      // Create promises for both operations
+      const questionsPromise = api.post(`/courses/${slug}/weeks/${selectedWeek}/questions/`);
+      const codePromise = isCodeGeneration 
+        ? api.post(`/courses/${slug}/weeks/${selectedWeek}/codes/create_coding_problems/`, {})
+        : Promise.resolve(null);
+
+      // Wait for question generation to complete (but code generation continues in background)
+      await questionsPromise;
+      
+      // Now start quiz creation while code generation might still be running
+      setLoadingMessage("Creating quizzes...");
+      const quizPromise = api.post(
         `/courses/${slug}/weeks/${selectedWeek}/quizzes/create_quizzes/`
       );
 
-      if (isCodeGeneration) {
-        try {
-          setLoadingMessage("Generating coding challanges...");
-          const response = await api.post(
-            `/courses/${slug}/weeks/${selectedWeek}/codes/create_coding_problems/`,
-            {}
-          );
-          const { problems, distribution } = response.data;
+      // Wait for both quiz creation and code generation to complete
+      const [quizResponse, codeResponse] = await Promise.all([
+        quizPromise,
+        codePromise
+      ]);
 
-          console.log(`Generated ${problems.length} coding problems`);
-          console.log("Difficulty distribution:", distribution);
-        } catch (codeErr: any) {
-          const errorMessage =
-            codeErr?.response?.data?.error ||
-            codeErr?.response?.data?.detail ||
-            "Error generating coding problems";
-          setError(errorMessage);
-          return;
-        }
+      // Process code generation results if it was enabled
+      if (isCodeGeneration && codeResponse) {
+        const { problems, distribution } = codeResponse.data;
+        console.log(`Generated ${problems.length} coding problems`);
+        console.log("Difficulty distribution:", distribution);
       }
 
       setMaterialDialogOpen(false);
@@ -142,6 +147,7 @@ export default function UploadCourseDialog({
       setLoadingMessage("Loading...");
     } catch (err: any) {
       setError(err?.response?.data?.detail || "Error uploading material.");
+      setIsLoading(false);
     }
   };
 
