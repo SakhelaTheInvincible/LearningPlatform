@@ -212,9 +212,6 @@ class Material(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        incomplete_materials = self.week.materials.filter(
-            is_read=False).count()
-        self.week.is_completed = (incomplete_materials == 0)
         self.week.save()
 
 
