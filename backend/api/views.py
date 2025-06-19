@@ -502,6 +502,38 @@ class WeekViewSet(mixins.CreateModelMixin,
             'quiz_completed': quiz_completed,
             'code_completed': code_completed,
         })
+        
+    @action(detail=True, methods=['PUT'], url_path='set_is_read')
+    def set_is_read(self, request, *args, **kwargs):
+        try:
+            is_read = request.data.get('is_read')
+            if is_read is None:
+                return Response({'error': 'is_read is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Accept boolean or string values
+            if isinstance(is_read, bool):
+                pass  # already boolean
+            elif isinstance(is_read, str):
+                if is_read.lower() == 'true':
+                    is_read = True
+                elif is_read.lower() == 'false':
+                    is_read = False
+                else:
+                    return Response({'error': "is_read string must be 'true' or 'false'"}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response({'error': 'is_read must be a boolean or string'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Get the week instance
+            week = self.get_object()
+            material = week.materials.first()
+            if not material:
+                return Response({'error': 'No material found for this week.'}, status=status.HTTP_404_NOT_FOUND)
+            material.is_read = is_read
+            material.save()
+
+            return Response({'message': 'is_read updated successfully', 'is_read': material.is_read}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 # ====================#
 
@@ -626,35 +658,6 @@ class MaterialViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
                 {'detail': f'Error processing material: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-    @action(detail=True, methods=['PUT'], url_path='set_is_read')
-    def set_is_read(self, request, *args, **kwargs):
-        try:
-            is_read = request.data.get('is_read')
-            if is_read is None:
-                return Response({'error': 'is_read is required'}, status=status.HTTP_400_BAD_REQUEST)
-
-            # Accept boolean or string values
-            if isinstance(is_read, bool):
-                pass  # already boolean
-            elif isinstance(is_read, str):
-                if is_read.lower() == 'true':
-                    is_read = True
-                elif is_read.lower() == 'false':
-                    is_read = False
-                else:
-                    return Response({'error': "is_read string must be 'true' or 'false'"}, status=status.HTTP_400_BAD_REQUEST)
-            else:
-                return Response({'error': 'is_read must be a boolean or string'}, status=status.HTTP_400_BAD_REQUEST)
-
-            # Get the material instance
-            material = self.get_object()
-            material.is_read = is_read
-            material.save()
-
-            return Response({'message': 'is_read updated successfully', 'is_read': material.is_read}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 # ====================#
 
