@@ -1,0 +1,19 @@
+ // User JSON
+
+{
+
+        "id": 1,
+        "password": "pbkdf2_sha256$870000$6VNzTddvE8Ouci5zTpMHVt$G9h6NYTyadO1E4VRoQxxkvX26/KEuhWL6JQKpdt965I=",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "SabaTheGoat",
+        "first_name": "saba1",
+        "last_name": "test12",
+        "email": "tes2t@gmail.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2025-05-30T10:11:22.948992Z",
+        "profile_picture": "http://127.0.0.1:8000/media/profile_pics/IMG_0644.jpeg",
+        "groups": [],
+        "user_permissions": []
+    },

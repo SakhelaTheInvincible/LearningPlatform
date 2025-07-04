@@ -6,8 +6,26 @@ import { ChevronRightIcon } from "@heroicons/react/24/solid";
 
 export default function Breadcrumbs() {
   const pathname = usePathname();
+  const segments = pathname.split("/").filter(Boolean);
 
-  const crumbs = pathname.split("/").filter((path) => path.length > 0);
+  // Process and combine segments like ["course", "2"] => ["course 2"]
+  const crumbs: { label: string; href: string }[] = [];
+  for (let i = 0; i < segments.length; i++) {
+    const current = segments[i];
+    const next = segments[i + 1];
+    const isNextNumber = next && /^\d+$/.test(next);
+
+    if (isNextNumber) {
+      const label = `${capitalize(current)} ${next}`;
+      const href = "/" + segments.slice(0, i + 2).join("/");
+      crumbs.push({ label, href });
+      i++; // skip next segment
+    } else {
+      const label = capitalize(current.replace(/-/g, " "));
+      const href = "/" + segments.slice(0, i + 1).join("/");
+      crumbs.push({ label, href });
+    }
+  }
 
   return (
     <nav
@@ -19,18 +37,19 @@ export default function Breadcrumbs() {
       </Link>
 
       {crumbs.map((crumb, index) => {
-        const href = "/" + crumbs.slice(0, index + 1).join("/");
         const isLast = index === crumbs.length - 1;
-        const label = decodeURIComponent(crumb).replace(/-/g, " "); // optional: replace dashes with spaces
 
         return (
-          <div key={href} className="flex items-center space-x-2">
+          <div key={crumb.href} className="flex items-center space-x-2">
             <ChevronRightIcon className="h-4 w-4 text-gray-400" />
             {isLast ? (
-              <span className="text-gray-800 font-medium">{label}</span>
+              <span className="text-gray-800 font-medium">{crumb.label}</span>
             ) : (
-              <Link href={href} className="hover:underline text-indigo-600">
-                {label}
+              <Link
+                href={crumb.href}
+                className="hover:underline text-indigo-600"
+              >
+                {crumb.label}
               </Link>
             )}
           </div>
@@ -38,4 +57,8 @@ export default function Breadcrumbs() {
       })}
     </nav>
   );
+}
+
+function capitalize(str: string) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
 }

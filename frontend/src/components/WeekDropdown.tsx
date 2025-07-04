@@ -14,7 +14,7 @@ import {
 
 type Part = {
   name: string;
-  type: "reading" | "questions" | "coding";
+  type: "reading" | "questions" | "coding" | "complete";
   slug: string; // URL part
   description: string;
   completed: boolean;
@@ -71,6 +71,17 @@ export default function WeekDropdown({
         ) : (
           <div className=" rounded-full bg-gray-200 mr-2 p-1">
             <CodeBracketIcon className="h-4 w-4" />
+          </div>
+        );
+
+      case "complete":
+        return completed ? (
+          <div className=" rounded-full bg-gray-200 mr-2 p-1">
+            <CheckCircleIcon className="h-4 w-4 bg-green-600 rounded-full text-white" />
+          </div>
+        ) : (
+          <div className=" rounded-full bg-gray-200 mr-2 p-1">
+            <CheckCircleIcon className="h-4 w-4" />
           </div>
         );
 
