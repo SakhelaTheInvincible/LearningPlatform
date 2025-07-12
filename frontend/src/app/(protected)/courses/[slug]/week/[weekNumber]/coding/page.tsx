@@ -72,7 +72,6 @@ console.log('Hello, World!');`;
         const data = await api.get(
           `/courses/${slug}/weeks/${weekNumber}/get_completion/`
         );
-        
         setParts([
           {
             name: "Reading Material",
@@ -197,6 +196,11 @@ console.log('Hello, World!');`;
                   your understanding, and build confidence in solving real-world
                   programming problems.
                 </p>
+                <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-amber-800 font-medium">
+                    📋 Completion Requirements: To complete this section, you must pass all Easy (90%+) and Medium (75%+) coding challenges. Hard challenges (70%+) are optional but recommended.
+                  </p>
+                </div>
               </motion.div>
 
               {/* Coding Tasks */}

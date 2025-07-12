@@ -29,7 +29,7 @@ export default function Header() {
       first_name: "",
       last_name: "",
       profile_picture: "",
-      experience: 0,
+      user_exp: 0,
     });
     
     // Dispatch custom event to notify other components
@@ -46,7 +46,7 @@ export default function Header() {
     first_name: "",
     last_name: "",
     profile_picture: "",
-    experience: 0,
+    user_exp: 0,
   });
 
   // Check if user is admin
@@ -96,7 +96,7 @@ export default function Header() {
           first_name: "",
           last_name: "",
           profile_picture: "",
-          experience: 0,
+          user_exp: 0,
         });
       }
     };
@@ -169,7 +169,7 @@ export default function Header() {
 
               {/* User Level Display */}
               <UserLevelDisplay 
-                totalExperience={user.experience || 0}
+                totalExperience={user.user_exp || 0}
                 maxExperience={500}
                 compact={true}
                 className="px-4 py-2.5 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-200 hover:shadow-md transition-all duration-300"
@@ -295,7 +295,7 @@ export default function Header() {
 
                   {/* User Level Display - Mobile */}
                   <UserLevelDisplay 
-                    totalExperience={user.experience || 0}
+                    totalExperience={user.user_exp || 0}
                     maxExperience={500}
                     compact={true}
                     className="px-4 py-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-200"

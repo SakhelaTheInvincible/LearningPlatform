@@ -18,6 +18,18 @@ export default function CodingTaskCard({
   userScore,
   taskId,
 }: CodingTaskCardProps) {
+  // Determine passing score based on difficulty
+  const getPassingScore = (difficulty: string) => {
+    const difficultyLower = difficulty.toLowerCase();
+    if (difficultyLower.includes('easy')) return 90;
+    if (difficultyLower.includes('medium')) return 75;
+    if (difficultyLower.includes('hard')) return 70;
+    return 70; // Default for unknown difficulty
+  };
+
+  const passingScore = getPassingScore(difficulty);
+  const isCompleted = userScore >= passingScore;
+
   function parseProblemStatement(raw: string): JSX.Element {
     // Step 1: Clean header and asterisks
     let text = raw.trim();
@@ -75,19 +87,33 @@ export default function CodingTaskCard({
 
   return (
     <Link href={`coding/task/${taskId}`}>
-      <div className="border border-gray-300 rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer bg-white mb-4">
+      <div className={`border rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer mb-4 ${
+        isCompleted 
+          ? 'bg-green-50 border-green-300' 
+          : 'bg-white border-gray-300'
+      }`}>
         <div className="flex flex-row justify-between items-center">
-          <h3 className="text-lg font-semibold text-indigo-600">
+          <h3 className={`text-lg font-semibold ${isCompleted ? 'text-green-600' : 'text-indigo-600'}`}>
             Task {taskNumber}
           </h3>
-          <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full">
+          <span className={`text-xs px-2 py-1 rounded-full ${
+            isCompleted 
+              ? 'bg-green-100 text-green-700' 
+              : 'bg-indigo-100 text-indigo-700'
+          }`}>
             {difficulty}
           </span>
         </div>
         <div className="text-gray-700 mt-2 line-clamp-2">
           {parseProblemStatement(description)}
         </div>
-        <p className="text-sm text-gray-600 mt-3">Score: {userScore} / 100</p>
+        <p className={`text-sm mt-3 ${
+          isCompleted 
+            ? 'text-green-600 font-medium' 
+            : 'text-gray-600'
+        }`}>
+          Score: {userScore} / 100 {isCompleted && '✓ Passed'}
+        </p>
       </div>
     </Link>
     // <div className="border border-gray-300 rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer bg-white mb-4">

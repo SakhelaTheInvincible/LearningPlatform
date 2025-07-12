@@ -138,7 +138,10 @@ export default function WeekComplete() {
 
       if (allCompleted) {
         // Mark week as complete
-        await api.post(`/courses/${slug}/weeks/${weekNumber}/complete/`);
+        const res = await api.put(
+          `/courses/${slug}/weeks/${weekNumber}/set_is_completed/`,
+          { is_completed: true }
+        );
         
         // Navigate to next week or course completion
         const nextWeek = weekNumber + 1;
@@ -148,6 +151,7 @@ export default function WeekComplete() {
         if (nextWeek <= courseData.duration_weeks) {
           router.push(`/courses/${slug}/week/${nextWeek}`);
         } else {
+          // This is the last week - navigate to course page where completion will be checked
           router.push(`/courses/${slug}`);
         }
       } else {

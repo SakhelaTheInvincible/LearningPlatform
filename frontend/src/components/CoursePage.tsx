@@ -27,6 +27,7 @@ interface CourseInfo {
   modules: string[];
   language?: string;
   completedWeeks: number;
+  is_completed: boolean;
 }
 
 export default function CoursePage({ slug }: { slug: string }) {
@@ -34,6 +35,8 @@ export default function CoursePage({ slug }: { slug: string }) {
   const [course, setCourse] = useState<CourseInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
+  const [showCompletionMessage, setShowCompletionMessage] = useState(false);
+  const [expGained, setExpGained] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -54,6 +57,7 @@ export default function CoursePage({ slug }: { slug: string }) {
           slug,
           language: data.language || "",
           completedWeeks,
+          is_completed: data.is_completed || false,
           modules:
             weeks.map(
               (week: any) =>
@@ -64,6 +68,41 @@ export default function CoursePage({ slug }: { slug: string }) {
         };
 
         setCourse(transformed);
+
+        // Check if course should be completed (100% progress but not marked as completed)
+        const progressPercent = Math.round((completedWeeks / data.duration_weeks) * 100);
+        if (progressPercent === 100 && !data.is_completed) {
+          console.log("Course is 100% complete but not marked as completed. Completing course...");
+          try {
+            const courseCompleteRes = await api.put(
+              `/courses/${slug}/set_is_completed/`,
+              { is_completed: true }
+            );
+            
+            // Update the course state with completion status
+            setCourse(prev => prev ? { ...prev, is_completed: true } : null);
+            
+            // Show completion message if XP was gained
+            console.log("Course completion response:", courseCompleteRes.data);
+            if (courseCompleteRes.data.exp_gain) {
+              console.log(`Course completed! Gained ${courseCompleteRes.data.exp_gain} XP`);
+              setExpGained(courseCompleteRes.data.exp_gain);
+              setShowCompletionMessage(true);
+              setTimeout(() => setShowCompletionMessage(false), 5000);
+              
+              // Trigger user data refresh in header to show updated XP
+              window.dispatchEvent(new Event("auth-changed"));
+            } else {
+              console.log("No XP gained from course completion");
+              // Still show completion message even without XP
+              setShowCompletionMessage(true);
+              setExpGained(0);
+              setTimeout(() => setShowCompletionMessage(false), 5000);
+            }
+          } catch (error) {
+            console.error("Failed to mark course as complete:", error);
+          }
+        }
       } catch (error) {
         console.error("Failed to load course:", error);
       } finally {
@@ -291,21 +330,28 @@ export default function CoursePage({ slug }: { slug: string }) {
               {/* Completion Status */}
               <div className="p-4">
                 <div className="flex items-center justify-center mb-2">
-                  {course.completedWeeks === course.weeks ? (
+                  {course.is_completed ? (
                     <FaCheckCircle className="text-green-600 text-2xl" />
+                  ) : course.completedWeeks === course.weeks ? (
+                    <div className="relative">
+                      <FaCheckCircle className="text-green-600 text-2xl animate-pulse" />
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-bounce"></div>
+                    </div>
                   ) : (
                     <FaExclamationCircle className="text-yellow-600 text-2xl" />
                   )}
                 </div>
                 <div className="font-bold text-lg text-gray-800">
-                  {course.completedWeeks === course.weeks ? (
+                  {course.is_completed ? (
                     "Completed"
+                  ) : course.completedWeeks === course.weeks ? (
+                    "Completing..."
                   ) : (
                     `${course.weeks - course.completedWeeks} Left`
                   )}
                 </div>
                 <div className="text-sm text-gray-500">
-                  {course.completedWeeks === course.weeks ? "Course Status" : "Weeks"}
+                  {course.is_completed ? "Course Status" : course.completedWeeks === course.weeks ? "Processing" : "Weeks"}
                 </div>
               </div>
             </div>
@@ -405,6 +451,24 @@ export default function CoursePage({ slug }: { slug: string }) {
           </motion.div>
         </div>
       </div>
+
+      {/* Course Completion Notification */}
+      {showCompletionMessage && (
+        <motion.div
+          initial={{ opacity: 0, y: -50 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -50 }}
+          className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-4 rounded-2xl shadow-2xl border border-green-400/20"
+        >
+          <div className="flex items-center gap-3">
+            <FaCheckCircle className="text-2xl" />
+            <div>
+              <div className="font-bold text-lg">🎉 Course Completed!</div>
+              <div className="text-green-100">You gained {expGained} XP!</div>
+            </div>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }

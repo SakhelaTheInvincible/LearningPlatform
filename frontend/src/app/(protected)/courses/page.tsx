@@ -21,6 +21,7 @@ interface Course {
   image: string;
   duration_weeks: number;
   estimated_time: number;
+  is_completed: boolean;
 }
 
 export default function CoursesPage() {
