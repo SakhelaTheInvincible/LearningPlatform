@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import Header from "@/src/components/Header";
+import { motion } from "framer-motion";
+import { FaUser, FaEdit, FaLock, FaUpload, FaCamera, FaShieldAlt, FaTimes } from "react-icons/fa";
 import Image from "next/image";
 import ProfileInfoCard from "@/src/components/ProfileInfoCard";
 import api from "@/src/lib/axios";
@@ -101,8 +102,6 @@ export default function ProfilePage() {
     }
   };
 
-  // Function to handle password change
-  // This modal allows the user to securely change their password by entering their current password, a new password, and confirming the new password. On submit, it sends a POST request to the backend password change endpoint. If successful, it closes the modal and shows a success message; otherwise, it displays an error.
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError("");
@@ -113,7 +112,6 @@ export default function ProfilePage() {
     }
     try {
       setLoading(true);
-      // You may need to adjust the endpoint depending on your backend
       await api.put("/users/set_password/", {
         old_password: passwordForm.current_password,
         new_password: passwordForm.new_password,
@@ -136,184 +134,296 @@ export default function ProfilePage() {
 
   if (loading)
     return (
-      <div className="p-8 text-center">
+      <div className="min-h-screen flex items-center justify-center">
         <LoadingPage />
       </div>
     );
-  if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
+  if (error) return <div className="min-h-screen flex items-center justify-center text-red-500">{error}</div>;
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100">
-      <Header />
-      <div className="mt-[60px] w-full flex justify-center bg-gray-200 pt-[80px] px-4 pb-10">
-        <div className="flex w-full max-w-7xl space-x-6">
-          {/* Left Side */}
-          <div className="flex flex-col space-y-6 w-1/3">
-            <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center">
-              <h2 className="text-xl font-bold mb-4">Personal Details</h2>
-              <div className="w-32 h-32 mb-4">
-                <Image
-                  src={
-                    user.profile_picture || "/profile/Profile-placeholder.png"
-                  }
-                  alt="Profile Picture"
-                  width={128}
-                  height={128}
-                  className="rounded-full object-cover"
-                />
-              </div>
-              <h3 className="text-lg font-semibold mb-4">{user.username}</h3>
-              <label className="bg-indigo-600 text-white px-4 py-2 rounded cursor-pointer hover:bg-indigo-700 transition">
-                Upload Image
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </label>
-              <button
-                className="mt-2 bg-indigo-500 text-white px-4 py-1 rounded hover:bg-indigo-700"
-                onClick={() =>
-                  updateField("profile_picture", user.profile_picture)
-                }
-                disabled={!imageFile}
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Beautiful Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+        {/* Animated Background Shapes */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
+          <div className="absolute -top-40 -left-40 w-80 h-80 bg-gradient-to-br from-indigo-200 to-purple-200 rounded-full opacity-20 animate-pulse"></div>
+          <div className="absolute -top-20 -right-20 w-60 h-60 bg-gradient-to-br from-blue-200 to-indigo-200 rounded-full opacity-30 animate-pulse" style={{animationDelay: '1s'}}></div>
+          <div className="absolute -bottom-32 -left-20 w-96 h-96 bg-gradient-to-br from-purple-200 to-pink-200 rounded-full opacity-15 animate-pulse" style={{animationDelay: '2s'}}></div>
+          <div className="absolute -bottom-20 -right-32 w-72 h-72 bg-gradient-to-br from-cyan-200 to-blue-200 rounded-full opacity-25 animate-pulse" style={{animationDelay: '0.5s'}}></div>
+        </div>
+        
+        {/* Grid Pattern Overlay */}
+        <div className="absolute inset-0 opacity-5">
+          <div className="w-full h-full" style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, rgba(99,102,241,0.3) 1px, transparent 0)`,
+            backgroundSize: '50px 50px'
+          }}></div>
+        </div>
+      </div>
+
+      <div className="relative z-10 min-h-screen pt-24 pb-12">
+        <div className="max-w-7xl mx-auto px-6">
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-12"
+          >
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
+              Profile Settings
+            </h1>
+            <p className="text-gray-600 text-lg">
+              Manage your account information and preferences
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left Side - Profile Picture */}
+            <div className="lg:col-span-1">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8"
               >
-                Save Image
-              </button>
-            </div>
-          </div>
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-2 mb-6">
+                    <FaUser className="text-indigo-600 text-xl" />
+                    <h2 className="text-2xl font-bold text-gray-800">Personal Details</h2>
+                  </div>
+                  
+                  {/* Profile Picture */}
+                  <div className="relative mb-6">
+                    <div className="w-32 h-32 mx-auto relative">
+                      <Image
+                        src={user.profile_picture || "/profile/Profile-placeholder.png"}
+                        alt="Profile Picture"
+                        fill
+                        className="rounded-full object-cover ring-4 ring-indigo-100 hover:ring-indigo-200 transition-all duration-300"
+                      />
+                      <div className="absolute inset-0 rounded-full bg-gradient-to-r from-indigo-400 to-purple-400 opacity-0 hover:opacity-20 transition-opacity duration-300"></div>
+                    </div>
+                  </div>
 
-          {/* Right Side */}
-          <div className="w-2/3">
-            <div className="bg-white rounded-lg shadow p-6 h-full">
-              <h2 className="text-xl font-bold mb-6">Account Information</h2>
-              <ProfileInfoCard
-                label="Username"
-                value={user.username}
-                onSave={(val) => updateField("username", val)}
-              />
-              <ProfileInfoCard
-                label="First Name"
-                value={user.first_name}
-                onSave={(val) => updateField("first_name", val)}
-              />
-              <ProfileInfoCard
-                label="Last Name"
-                value={user.last_name}
-                onSave={(val) => updateField("last_name", val)}
-              />
-              <ProfileInfoCard
-                label="Email"
-                value={user.email}
-                onSave={(val) => updateField("email", val)}
-              />
-              {/* Password Change Modal Trigger */}
-              <button
-                className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
-                onClick={() => setShowPasswordModal(true)}
-              >
-                Change Password
-              </button>
-
-              {isAdmin && (
-                <div className="mt-4 text-sm">
-                  <Link
-                    href="/admin"
-                    className="text-indigo-600 hover:underline"
-                  >
-                    Go to Admin Page
-                  </Link>
-                </div>
-              )}
-
-              {/* Password Change Modal */}
-              {showPasswordModal && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-                  <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md relative">
-                    <button
-                      className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
-                      onClick={() => setShowPasswordModal(false)}
+                  <h3 className="text-xl font-semibold text-gray-800 mb-6">{user.username}</h3>
+                  
+                  {/* Upload Buttons */}
+                  <div className="space-y-3">
+                    <motion.label
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="group flex items-center justify-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold cursor-pointer transition-all duration-300 shadow-lg hover:shadow-xl"
                     >
-                      &times;
-                    </button>
-                    <h3 className="text-lg font-bold mb-4">Change Password</h3>
-                    <form onSubmit={handlePasswordChange} className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-1">
-                          Current Password
-                        </label>
-                        <input
-                          type="password"
-                          className="w-full border border-gray-300 rounded px-3 py-2"
-                          value={passwordForm.current_password}
-                          onChange={(e) =>
-                            setPasswordForm((f) => ({
-                              ...f,
-                              current_password: e.target.value,
-                            }))
-                          }
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">
-                          New Password
-                        </label>
-                        <input
-                          type="password"
-                          className="w-full border border-gray-300 rounded px-3 py-2"
-                          value={passwordForm.new_password}
-                          onChange={(e) =>
-                            setPasswordForm((f) => ({
-                              ...f,
-                              new_password: e.target.value,
-                            }))
-                          }
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">
-                          Confirm New Password
-                        </label>
-                        <input
-                          type="password"
-                          className="w-full border border-gray-300 rounded px-3 py-2"
-                          value={passwordForm.confirm_new_password}
-                          onChange={(e) =>
-                            setPasswordForm((f) => ({
-                              ...f,
-                              confirm_new_password: e.target.value,
-                            }))
-                          }
-                          required
-                        />
-                      </div>
-                      {passwordError && (
-                        <div className="text-red-500 text-sm">
-                          {passwordError}
-                        </div>
-                      )}
-                      {passwordSuccess && (
-                        <div className="text-green-600 text-sm">
-                          {passwordSuccess}
-                        </div>
-                      )}
-                      <button
-                        type="submit"
-                        className="w-full bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
-                      >
-                        Save Password
-                      </button>
-                    </form>
+                      <FaCamera className="text-sm group-hover:scale-110 transition-transform" />
+                      Upload Image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                      />
+                    </motion.label>
+                    
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="group flex items-center justify-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                      onClick={() => updateField("profile_picture", user.profile_picture)}
+                      disabled={!imageFile}
+                    >
+                      <FaUpload className="text-sm group-hover:scale-110 transition-transform" />
+                      Save Image
+                    </motion.button>
                   </div>
                 </div>
-              )}
+              </motion.div>
+            </div>
+
+            {/* Right Side - Account Information */}
+            <div className="lg:col-span-2">
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8, delay: 0.4 }}
+                className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8"
+              >
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-3">
+                    <FaEdit className="text-indigo-600 text-xl" />
+                    <h2 className="text-2xl font-bold text-gray-800">Account Information</h2>
+                  </div>
+                  {isAdmin && (
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Link
+                        href="/admin"
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold transition-all duration-300 shadow-lg hover:shadow-xl"
+                      >
+                        <FaShieldAlt className="text-sm" />
+                        Admin Panel
+                      </Link>
+                    </motion.div>
+                  )}
+                </div>
+
+                <div className="space-y-6">
+                  <ProfileInfoCard
+                    label="Username"
+                    value={user.username}
+                    onSave={(val) => updateField("username", val)}
+                  />
+                  <ProfileInfoCard
+                    label="First Name"
+                    value={user.first_name}
+                    onSave={(val) => updateField("first_name", val)}
+                  />
+                  <ProfileInfoCard
+                    label="Last Name"
+                    value={user.last_name}
+                    onSave={(val) => updateField("last_name", val)}
+                  />
+                  <ProfileInfoCard
+                    label="Email"
+                    value={user.email}
+                    onSave={(val) => updateField("email", val)}
+                  />
+                  
+                  {/* Password Change Button */}
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="group flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold transition-all duration-300 shadow-lg hover:shadow-xl"
+                    onClick={() => setShowPasswordModal(true)}
+                  >
+                    <FaLock className="text-sm group-hover:scale-110 transition-transform" />
+                    Change Password
+                  </motion.button>
+                </div>
+              </motion.div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Password Change Modal */}
+      {showPasswordModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-50 p-4"
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/20 w-full max-w-md relative p-8"
+          >
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+              onClick={() => setShowPasswordModal(false)}
+            >
+              <FaTimes className="text-sm" />
+            </motion.button>
+
+            <div className="flex items-center gap-3 mb-6">
+              <FaLock className="text-indigo-600 text-xl" />
+              <h3 className="text-2xl font-bold text-gray-800">Change Password</h3>
+            </div>
+
+            <form onSubmit={handlePasswordChange} className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+                  value={passwordForm.current_password}
+                  onChange={(e) =>
+                    setPasswordForm((f) => ({
+                      ...f,
+                      current_password: e.target.value,
+                    }))
+                  }
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+                  value={passwordForm.new_password}
+                  onChange={(e) =>
+                    setPasswordForm((f) => ({
+                      ...f,
+                      new_password: e.target.value,
+                    }))
+                  }
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+                  value={passwordForm.confirm_new_password}
+                  onChange={(e) =>
+                    setPasswordForm((f) => ({
+                      ...f,
+                      confirm_new_password: e.target.value,
+                    }))
+                  }
+                  required
+                />
+              </div>
+
+              {passwordError && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-red-500 text-sm bg-red-50 p-3 rounded-xl border border-red-200"
+                >
+                  {passwordError}
+                </motion.div>
+              )}
+              
+              {passwordSuccess && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-green-600 text-sm bg-green-50 p-3 rounded-xl border border-green-200"
+                >
+                  {passwordSuccess}
+                </motion.div>
+              )}
+
+              <motion.button
+                type="submit"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="w-full flex items-center justify-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold transition-all duration-300 shadow-lg hover:shadow-xl"
+              >
+                <FaLock className="text-sm" />
+                Save Password
+              </motion.button>
+            </form>
+          </motion.div>
+        </motion.div>
+      )}
     </div>
   );
 }

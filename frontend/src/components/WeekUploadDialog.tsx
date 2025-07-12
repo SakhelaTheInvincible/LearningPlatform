@@ -1,7 +1,9 @@
 "use client";
 
 import { Dialog, Transition } from "@headlessui/react";
-import { Fragment, useState } from "react";
+import { Fragment, useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { FaUpload, FaCheck, FaSpinner } from "react-icons/fa";
 import api from "@/src/lib/axios";
 import LoadingComponent from "./UploadLoadingComponent";
 
@@ -29,11 +31,87 @@ export default function UploadWeekDialog({
   const [message, setMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("Loading...");
+  const [checkingWeeks, setCheckingWeeks] = useState(false);
 
   function showTemporaryMessage(msg: string, duration = 1000) {
     setMessage(msg);
     setTimeout(() => setMessage(null), duration);
   }
+
+  // Check which weeks already have any content (materials, questions, coding challenges, quizzes)
+  const checkExistingMaterials = async () => {
+    setCheckingWeeks(true);
+    try {
+      const existingWeeks = new Set<number>();
+      
+      // Check each week for any existing content
+      for (let i = 1; i <= weeks; i++) {
+        let hasContent = false;
+        
+        // Check for materials
+        try {
+          const materialsResponse = await api.get(`/courses/${slug}/weeks/${i}/materials/`);
+          if (materialsResponse.data && materialsResponse.data.length > 0) {
+            hasContent = true;
+          }
+        } catch (err) {
+          // No materials, continue checking other content types
+        }
+        
+        // Check for questions
+        if (!hasContent) {
+          try {
+            const questionsResponse = await api.get(`/courses/${slug}/weeks/${i}/questions/`);
+            if (questionsResponse.data && questionsResponse.data.length > 0) {
+              hasContent = true;
+            }
+          } catch (err) {
+            // No questions, continue checking
+          }
+        }
+        
+        // Check for coding challenges
+        if (!hasContent) {
+          try {
+            const codesResponse = await api.get(`/courses/${slug}/weeks/${i}/codes/`);
+            if (codesResponse.data && codesResponse.data.length > 0) {
+              hasContent = true;
+            }
+          } catch (err) {
+            // No coding challenges, continue checking
+          }
+        }
+        
+        // Check for quizzes
+        if (!hasContent) {
+          try {
+            const quizzesResponse = await api.get(`/courses/${slug}/weeks/${i}/quizzes/`);
+            if (quizzesResponse.data && quizzesResponse.data.length > 0) {
+              hasContent = true;
+            }
+          } catch (err) {
+            // No quizzes
+          }
+        }
+        
+        if (hasContent) {
+          existingWeeks.add(i);
+        }
+      }
+      
+      setUploadedWeeks(existingWeeks);
+    } catch (err) {
+      console.error("Error checking existing content:", err);
+    } finally {
+      setCheckingWeeks(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      checkExistingMaterials();
+    }
+  }, [isOpen, slug, weeks]);
 
   const openMaterialUpload = (weekNumber: number) => {
     setSelectedWeek(weekNumber);
@@ -177,32 +255,86 @@ export default function UploadWeekDialog({
                 leaveFrom="opacity-100 scale-100"
                 leaveTo="opacity-0 scale-95"
               >
-                <Dialog.Panel className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-                  <Dialog.Title className="text-lg font-medium text-gray-900">
+                <Dialog.Panel className="w-full max-w-md rounded-3xl bg-white/90 backdrop-blur-md p-6 shadow-2xl border border-white/20">
+                  <Dialog.Title className="text-2xl font-bold text-gray-900 mb-6">
                     Upload Weekly Materials
                   </Dialog.Title>
 
-                  <div className="mt-4 space-y-2">
-                    {Array.from({ length: weeks }).map((_, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between"
+                  {checkingWeeks ? (
+                    <div className="flex items-center justify-center py-8">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                       >
-                        <span>Week {index + 1}</span>
-                        <button
-                          onClick={() => openMaterialUpload(index + 1)}
-                          disabled={uploadedWeeks.has(index + 1)}
-                          className={`rounded px-3 py-1 text-white w-[100px] ${
-                            uploadedWeeks.has(index + 1)
-                              ? "bg-gray-400 cursor-not-allowed"
-                              : "bg-indigo-500 hover:bg-indigo-400"
-                          }`}
-                        >
-                          {uploadedWeeks.has(index + 1) ? "Uploaded" : "Upload"}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                        <FaSpinner className="text-2xl text-indigo-500" />
+                      </motion.div>
+                      <span className="ml-3 text-gray-600">Checking existing content...</span>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Filter to only show weeks without any content (materials, questions, coding challenges, quizzes) */}
+                      {(() => {
+                        const weeksWithoutContent = Array.from({ length: weeks })
+                          .map((_, index) => index + 1)
+                          .filter(weekNum => !uploadedWeeks.has(weekNum));
+
+                        if (weeksWithoutContent.length === 0) {
+                          return (
+                            <div className="text-center py-8">
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.5 }}
+                                className="bg-green-50 rounded-2xl p-6 border border-green-200"
+                              >
+                                <FaCheck className="text-3xl text-green-600 mx-auto mb-3" />
+                                <h3 className="text-lg font-semibold text-green-800 mb-2">
+                                  All Content Created!
+                                </h3>
+                                <p className="text-green-600">
+                                  All {weeks} weeks have content uploaded successfully.
+                                </p>
+                              </motion.div>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="space-y-3">
+                            <div className="text-sm text-gray-600 mb-4">
+                              Showing {weeksWithoutContent.length} of {weeks} weeks that need content
+                            </div>
+                            {weeksWithoutContent.map((weekNum, displayIndex) => (
+                              <motion.div
+                                key={weekNum}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: displayIndex * 0.1 }}
+                                className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-200"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-100 text-gray-600">
+                                    <span className="text-sm font-semibold">{weekNum}</span>
+                                  </div>
+                                  <span className="font-medium text-gray-800">Week {weekNum}</span>
+                                </div>
+                                
+                                <motion.button
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                  onClick={() => openMaterialUpload(weekNum)}
+                                  className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-200 bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 shadow-lg hover:shadow-xl"
+                                >
+                                  <FaUpload className="text-sm" />
+                                  <span>Upload</span>
+                                </motion.button>
+                              </motion.div>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </>
+                  )}
                 </Dialog.Panel>
               </Transition.Child>
             </div>
@@ -244,70 +376,123 @@ export default function UploadWeekDialog({
                   // ⏳ Show loading spinner
                   <LoadingComponent message={loadingMessage} />
                 ) : (
-                  <Dialog.Panel className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-                    <Dialog.Title className="text-lg font-medium text-gray-900">
+                  <Dialog.Panel className="w-full max-w-md rounded-3xl bg-white/90 backdrop-blur-md p-8 shadow-2xl border border-white/20">
+                    <Dialog.Title className="text-2xl font-bold text-gray-900 mb-6 text-center">
                       Upload Material for Week {selectedWeek}
                     </Dialog.Title>
-                    <input
-                      type="text"
-                      placeholder="Material Title"
-                      className="w-full mt-4 rounded border px-3 py-2"
-                      value={materialTitle}
-                      onChange={(e) => setMaterialTitle(e.target.value)}
-                    />
-                    <textarea
-                      placeholder="Material Description"
-                      className="w-full mt-4 mb-2 rounded border px-3 py-2"
-                      value={materialDescription}
-                      onChange={(e) => setMaterialDescription(e.target.value)}
-                    />
-
-                    <div className="mt-4 mb-4">
-                      <label className="flex items-center space-x-2 text-md text-gray-700 mb-2">
+                    
+                    <div className="space-y-5">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Material Title
+                        </label>
                         <input
-                          type="checkbox"
-                          checked={isCodeGeneration}
-                          onChange={(e) =>
-                            setIsCodeGeneration(e.target.checked)
-                          }
-                          className="h-4 w-4 rounded border-gray-300 accent-indigo-600"
+                          type="text"
+                          placeholder="Enter material title..."
+                          className="w-full rounded-xl border-0 bg-white/80 backdrop-blur-sm px-4 py-3 text-gray-900 placeholder-gray-500 shadow-sm ring-1 ring-gray-300 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-0 transition-all duration-200"
+                          value={materialTitle}
+                          onChange={(e) => setMaterialTitle(e.target.value)}
                         />
-                        <span>Gernerate coding tasks?</span>
-                      </label>
-                    </div>
+                      </div>
 
-                    <label
-                      htmlFor="material-upload"
-                      className="cursor-pointer inline-block text-indigo-600 hover:underline"
-                    >
-                      Choose File
-                    </label>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Material Description
+                        </label>
+                        <textarea
+                          placeholder="Enter material description..."
+                          rows={3}
+                          className="w-full rounded-xl border-0 bg-white/80 backdrop-blur-sm px-4 py-3 text-gray-900 placeholder-gray-500 shadow-sm ring-1 ring-gray-300 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-0 transition-all duration-200 resize-none"
+                          value={materialDescription}
+                          onChange={(e) => setMaterialDescription(e.target.value)}
+                        />
+                      </div>
 
-                    <input
-                      id="material-upload"
-                      type="file"
-                      accept=".txt,.pdf,.doc,.docx"
-                      onChange={(e) => setMaterial(e.target.files?.[0] || null)}
-                      className="hidden"
-                    />
-                    {material && (
-                      <p className="mt-2 text-sm text-gray-600">
-                        Selected: {material.name}
-                      </p>
-                    )}
-                    <div className="mt-6">
+                      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 border border-indigo-200">
+                        <label className="flex items-center space-x-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={isCodeGeneration}
+                            onChange={(e) => setIsCodeGeneration(e.target.checked)}
+                            className="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0"
+                          />
+                          <span className="text-sm font-medium text-gray-700">
+                            Generate coding tasks automatically
+                          </span>
+                        </label>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Upload File
+                        </label>
+                        <div className="relative">
+                          <label
+                            htmlFor="material-upload"
+                            className="cursor-pointer flex items-center justify-center w-full rounded-xl border-2 border-dashed border-gray-300 bg-white/50 backdrop-blur-sm p-6 text-center hover:border-indigo-400 hover:bg-indigo-50/50 transition-all duration-200"
+                          >
+                            <div className="space-y-2">
+                              <FaUpload className="mx-auto text-2xl text-gray-400" />
+                              <div className="text-sm text-gray-600">
+                                <span className="font-medium text-indigo-600">Choose a file</span> or drag and drop
+                              </div>
+                              <p className="text-xs text-gray-500">
+                                PDF, DOC, DOCX, TXT up to 10MB
+                              </p>
+                            </div>
+                          </label>
+                          <input
+                            id="material-upload"
+                            type="file"
+                            accept=".txt,.pdf,.doc,.docx"
+                            onChange={(e) => setMaterial(e.target.files?.[0] || null)}
+                            className="hidden"
+                          />
+                        </div>
+                        {material && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="mt-3 flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200"
+                          >
+                            <FaCheck className="text-green-600" />
+                            <span className="text-sm font-medium text-green-800">
+                              {material.name}
+                            </span>
+                          </motion.div>
+                        )}
+                      </div>
+
                       {error && (
-                        <div className="text-red-600 text-sm mb-2">{error}</div>
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="p-3 bg-red-50 rounded-lg border border-red-200"
+                        >
+                          <div className="text-red-600 text-sm font-medium">{error}</div>
+                        </motion.div>
                       )}
-                      <button
-                        onClick={async () => {
-                          await handleWeekUpload();
-                          await handleMaterialUpload();
-                        }}
-                        className="w-full rounded bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-500"
-                      >
-                        Upload Material
-                      </button>
+
+                      <div className="flex gap-3 pt-4">
+                        <button
+                          onClick={() => setMaterialDialogOpen(false)}
+                          className="flex-1 rounded-xl bg-gray-200 px-4 py-3 text-gray-700 font-medium hover:bg-gray-300 transition-colors duration-200"
+                        >
+                          Cancel
+                        </button>
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={async () => {
+                            await handleWeekUpload();
+                            await handleMaterialUpload();
+                          }}
+                          disabled={!material || !materialTitle}
+                          className="flex-1 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-3 text-white font-medium hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
+                        >
+                          Upload Material
+                        </motion.button>
+                      </div>
                     </div>
                   </Dialog.Panel>
                 )}

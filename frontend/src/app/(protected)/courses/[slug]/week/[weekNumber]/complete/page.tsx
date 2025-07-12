@@ -1,42 +1,13 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
-import Header from "@/src/components/Header";
+
+import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
+import { FaCheck, FaCheckCircle, FaGraduationCap, FaArrowRight } from "react-icons/fa";
 import WeekMenu, { WeekMenuHandle } from "@/src/components/weekMenu";
 import Breadcrumbs from "@/src/components/Breadcrumbs";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import api from "@/src/lib/axios";
-import LoadingPage from "@/src/components/LoadingPage";
-
-interface WeekInfo {
-  week_number: number;
-  materials: Material[];
-  // quizzes: Quiz[];
-  // coding: Coding_Question[];
-}
-interface Material {
-  title: string;
-  description: string;
-  summarized_material: string;
-}
-// interface Quiz {
-//   id: number;
-//   difficulty: "A" | "I" | "S" | "M" | "N";
-//   user_score: number;
-//   created_at: string;
-//   questions: Question[];
-// }
-// interface Question {
-//   id: number;
-//   question_text: string;
-//   difficulty: string;
-//   question_type: "choice" | "multiple_choice" | "true_false" | "open";
-//   answer: string;
-//   explanation: string;
-// }
-
-// interface Coding_Question {
-//   title: string;
-// }
+import { useRouter } from "next/navigation";
 
 interface Part {
   name: string;
@@ -45,29 +16,18 @@ interface Part {
   description: string;
   completed: boolean;
 }
-interface Details {
-  material_read: boolean;
-  quiz_completed: boolean;
-  code_completed: boolean;
-}
 
-export default function WeekReading() {
-  const [completionDetails, setCompletionDetails] = useState<Details>({
-    material_read: false,
-    quiz_completed: false,
-    code_completed: false,
-  });
-  const [material, setMaterial] = useState<WeekInfo | null>(null);
-  const [loading, setLoading] = useState(true);
+export default function WeekComplete() {
+  const [parts, setParts] = useState<Part[]>([]);
+  const [showIncompleteMessage, setShowIncompleteMessage] = useState(false);
+  const [completedTasks, setCompletedTasks] = useState(0);
+  const [totalTasks, setTotalTasks] = useState(0);
+  const menuRef = useRef<WeekMenuHandle>(null);
+  const router = useRouter();
+
   const params = useParams();
   const slug = params?.slug as string;
   const weekNumber = parseInt(params?.weekNumber as string);
-  const [duration, setDuration] = useState(0);
-  const [parts, setParts] = useState<Part[]>([]);
-  const [hasCoding, setHasCoding] = useState(false);
-  const [showIncompleteMessage, setShowIncompleteMessage] = useState(false);
-  const menuRef = useRef<WeekMenuHandle>(null);
-  const router = useRouter();
 
   useEffect(() => {
     async function fetchSidebar() {
@@ -76,15 +36,14 @@ export default function WeekReading() {
           `/courses/${slug}/weeks/${weekNumber}/get_completion/`
         );
         const data = res.data;
-        setCompletionDetails(data);
-        console.log(data);
         const res1 = await api.get(
           `/courses/${slug}/weeks/${weekNumber}/codes/`
         );
         const data1 = res1.data;
-        if (data1.length != 0) {
-          setHasCoding(true);
-          setParts([
+        let currentParts: Part[] = [];
+        
+        if (data1.length !== 0) {
+          currentParts = [
             {
               name: "Reading Material",
               type: "reading",
@@ -103,22 +62,22 @@ export default function WeekReading() {
               name: "Coding Tasks",
               type: "coding",
               slug: "coding",
-              description: "Complete coding challanges",
+              description: "Complete coding challenges",
               completed: data.code_completed,
             },
             {
               name: "Complete Tasks",
               type: "complete",
               slug: "complete",
-              description: "Finish this weeks materials",
+              description: "Finish this week's materials",
               completed:
                 data.material_read &&
                 data.quiz_completed &&
                 data.code_completed,
             },
-          ]);
+          ];
         } else {
-          setParts([
+          currentParts = [
             {
               name: "Reading Material",
               type: "reading",
@@ -137,115 +96,251 @@ export default function WeekReading() {
               name: "Complete Tasks",
               type: "complete",
               slug: "complete",
-              description: "Finish this weeks materials",
+              description: "Finish this week's materials",
               completed: data.material_read && data.quiz_completed,
             },
-          ]);
+          ];
         }
+
+        setParts(currentParts);
+        
+        // Calculate completion stats
+        const completed = currentParts.filter(part => part.completed && part.type !== 'complete').length;
+        const total = currentParts.filter(part => part.type !== 'complete').length;
+        setCompletedTasks(completed);
+        setTotalTasks(total);
       } catch (error) {
         console.error("Failed to load sidebar:", error);
       }
     }
+
     fetchSidebar();
-  }, []);
-
-  const finishWeek = async () => {
-    const { material_read, quiz_completed, code_completed } = completionDetails;
-
-    const allComplete =
-      material_read && quiz_completed && (hasCoding ? code_completed : true);
-
-    if (allComplete) {
-      const new_weekNumber = weekNumber + 1;
-      await api.put(`/courses/${slug}/weeks/${weekNumber}/set_is_completed/`, {
-        is_completed: true,
-      });
-      if (new_weekNumber > duration) {
-        router.push(`/courses/${slug}`);
-      } else {
-        router.push(`/courses/${slug}/week/${new_weekNumber}`);
-      }
-    } else {
-      setShowIncompleteMessage(true);
-      setTimeout(() => setShowIncompleteMessage(false), 1000);
-    }
-  };
-
-  useEffect(() => {
-    async function fetchCourse() {
-      try {
-        const res = await api.get(`/courses/${slug}`);
-        const data = res.data;
-
-        console.log(data);
-        setDuration(data.duration_weeks);
-
-        const week = data.weeks?.find((w: any) => w.week_number === weekNumber);
-      } catch (error) {
-        console.error("Failed to load course:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchCourse();
-  }, []);
-
-  useEffect(() => {
-    async function fetchCourse() {
-      try {
-        const res = await api.get(`/courses/${slug}/weeks/${weekNumber}`);
-        const data = res.data;
-        setMaterial(data);
-      } catch (error) {
-        console.error("Failed to load course:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    if (slug && weekNumber) fetchCourse();
   }, [slug, weekNumber]);
 
-  if (loading)
-    return (
-      <div className="p-10">
-        <LoadingPage />
-      </div>
-    );
-  if (!material) return <div className="p-10">Material not found.</div>;
+  async function finishWeek() {
+    try {
+      const res = await api.get(
+        `/courses/${slug}/weeks/${weekNumber}/get_completion/`
+      );
+      const data = res.data;
+      console.log(data);
+      const res1 = await api.get(
+        `/courses/${slug}/weeks/${weekNumber}/codes/`
+      );
+      const data1 = res1.data;
+      let allCompleted = false;
+      
+      if (data1.length !== 0) {
+        allCompleted = data.material_read && data.quiz_completed && data.code_completed;
+      } else {
+        allCompleted = data.material_read && data.quiz_completed;
+      }
+
+      if (allCompleted) {
+        // Mark week as complete
+        await api.post(`/courses/${slug}/weeks/${weekNumber}/complete/`);
+        
+        // Navigate to next week or course completion
+        const nextWeek = weekNumber + 1;
+        const courseRes = await api.get(`/courses/${slug}`);
+        const courseData = courseRes.data;
+        
+        if (nextWeek <= courseData.duration_weeks) {
+          router.push(`/courses/${slug}/week/${nextWeek}`);
+        } else {
+          router.push(`/courses/${slug}`);
+        }
+      } else {
+        setShowIncompleteMessage(true);
+        setTimeout(() => setShowIncompleteMessage(false), 3000);
+      }
+    } catch (error) {
+      console.error("Failed to complete week:", error);
+    }
+  }
+
+  const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
   return (
-    <>
-      <div className="flex flex-col">
-        <Header />
-        <div className="flex flex-row justify-start mt-16 bg-white ">
-          <WeekMenu ref={menuRef} parts={parts} />
-          <div className="flex flex-row justify-start ml-8 mt-8">
-            <div className="flex flex-col justify-start">
-              <Breadcrumbs />
-              <div className="px-[150px] py-[80px]">
-                <div className="text-black text-xl">
-                  Complete all materials for this week and continue learning.
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Beautiful Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+        {/* Animated Background Shapes */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
+          <div className="absolute -top-40 -left-40 w-80 h-80 bg-gradient-to-br from-indigo-200 to-purple-200 rounded-full opacity-20 animate-pulse"></div>
+          <div className="absolute -top-20 -right-20 w-60 h-60 bg-gradient-to-br from-blue-200 to-indigo-200 rounded-full opacity-30 animate-pulse" style={{animationDelay: '1s'}}></div>
+          <div className="absolute -bottom-32 -left-20 w-96 h-96 bg-gradient-to-br from-purple-200 to-pink-200 rounded-full opacity-15 animate-pulse" style={{animationDelay: '2s'}}></div>
+          <div className="absolute -bottom-20 -right-32 w-72 h-72 bg-gradient-to-br from-cyan-200 to-blue-200 rounded-full opacity-25 animate-pulse" style={{animationDelay: '0.5s'}}></div>
+        </div>
+        
+        {/* Grid Pattern Overlay */}
+        <div className="absolute inset-0 opacity-5">
+          <div className="w-full h-full" style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, rgba(99,102,241,0.3) 1px, transparent 0)`,
+            backgroundSize: '50px 50px'
+          }}></div>
+        </div>
+      </div>
+
+      <div className="relative z-10 pt-20">
+        <div className="flex flex-col lg:flex-row min-h-screen">
+          {/* Sidebar */}
+          <div className="lg:w-80 flex-shrink-0 p-6">
+            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 sticky top-24">
+              <WeekMenu ref={menuRef} parts={parts} />
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="flex-1 p-6">
+            <div className="max-w-4xl mx-auto">
+              {/* Breadcrumbs */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8 }}
+                className="mb-6"
+              >
+                <Breadcrumbs />
+              </motion.div>
+
+              {/* Header */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl p-8 border border-white/20 mb-8"
+              >
+                <div className="flex items-center gap-3 mb-6">
+                  <FaGraduationCap className="text-indigo-600 text-3xl" />
+                  <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                    Week {weekNumber} Complete
+                  </h1>
                 </div>
-              </div>
-              <div className="flex flex-row justify-start ml-[180px]">
-                <button
-                  className="hover:bg-indigo-500 bg-indigo-600 text-white p-2 rounded hover:cursor-pointer"
+                <p className="text-gray-700 text-lg leading-relaxed">
+                  Complete all materials for this week and continue your learning journey.
+                </p>
+              </motion.div>
+
+              {/* Progress Card */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.4 }}
+                className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl p-8 border border-white/20 mb-8"
+              >
+                <div className="flex items-center gap-3 mb-6">
+                  <FaCheckCircle className="text-green-600 text-2xl" />
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                    Week Progress
+                  </h2>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                  <div className="text-center p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl">
+                    <div className="text-3xl font-bold text-indigo-600 mb-2">
+                      {completedTasks}
+                    </div>
+                    <div className="text-sm text-gray-600">Tasks Completed</div>
+                  </div>
+                  <div className="text-center p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl">
+                    <div className="text-3xl font-bold text-purple-600 mb-2">
+                      {totalTasks}
+                    </div>
+                    <div className="text-sm text-gray-600">Total Tasks</div>
+                  </div>
+                  <div className="text-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl">
+                    <div className="text-3xl font-bold text-green-600 mb-2">
+                      {progressPercent}%
+                    </div>
+                    <div className="text-sm text-gray-600">Progress</div>
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="bg-gray-200 rounded-full h-4 mb-6">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressPercent}%` }}
+                    transition={{ duration: 1.5, delay: 0.8 }}
+                    className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 h-4 rounded-full"
+                  />
+                </div>
+
+                {/* Task List */}
+                <div className="space-y-3">
+                  {parts.filter(part => part.type !== 'complete').map((part, index) => (
+                    <motion.div
+                      key={part.slug}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.5, delay: 0.6 + index * 0.1 }}
+                      className={`flex items-center gap-3 p-4 rounded-xl transition-all ${
+                        part.completed 
+                          ? 'bg-green-50 border border-green-200' 
+                          : 'bg-orange-50 border border-orange-200'
+                      }`}
+                    >
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                        part.completed 
+                          ? 'bg-green-500 text-white' 
+                          : 'bg-orange-500 text-white'
+                      }`}>
+                        {part.completed ? <FaCheck className="text-xs" /> : index + 1}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-800">{part.name}</h3>
+                        <p className="text-sm text-gray-600">{part.description}</p>
+                      </div>
+                      <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        part.completed 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-orange-100 text-orange-800'
+                      }`}>
+                        {part.completed ? 'Completed' : 'Pending'}
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+
+              {/* Complete Button */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 1.0 }}
+                className="text-center"
+              >
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="group flex items-center gap-3 px-8 py-4 mx-auto rounded-xl text-white font-semibold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={finishWeek}
                 >
-                  Mark as Completed
-                </button>
-              </div>
+                  <FaCheck className="text-lg group-hover:scale-110 transition-transform" />
+                  Mark Week as Complete
+                  <FaArrowRight className="text-lg group-hover:translate-x-1 transition-transform" />
+                </motion.button>
+              </motion.div>
             </div>
           </div>
         </div>
-        {showIncompleteMessage && (
-          <div className="flex flex-row fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-[#252526] text-sm text-white px-6 py-2 rounded-lg border border-gray-700 shadow-md animate-fade-in-out">
+      </div>
+
+      {/* Incomplete Message */}
+      {showIncompleteMessage && (
+        <motion.div
+          initial={{ opacity: 0, y: -50 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -50 }}
+          className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-white/90 backdrop-blur-sm text-orange-800 px-6 py-4 rounded-2xl border border-orange-200 shadow-xl"
+        >
+          <div className="flex items-center gap-3">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
               fill="currentColor"
-              className="size-5 mr-2 text-yellow-500"
+              className="w-6 h-6 text-orange-500"
             >
               <path
                 fillRule="evenodd"
@@ -253,10 +348,10 @@ export default function WeekReading() {
                 clipRule="evenodd"
               />
             </svg>
-            Please complete all required materials before proceeding.
+            <span className="font-medium">Please complete all required materials before proceeding.</span>
           </div>
-        )}
-      </div>
-    </>
+        </motion.div>
+      )}
+    </div>
   );
 }

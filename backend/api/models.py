@@ -268,11 +268,11 @@ class Quiz(models.Model):
     ]
 
     PASSING_THRESHOLD = [
-        ('N', 50),
-        ('M', 60),
+        ('N', 80),
+        ('M', 75),
         ('S', 70),
-        ('I', 80),
-        ('A', 85),
+        ('I', 65),
+        ('A', 55),
     ]
 
     week = models.ForeignKey(

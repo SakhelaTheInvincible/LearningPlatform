@@ -1,7 +1,9 @@
 "use client";
 
-import { Dialog, Listbox, Transition } from "@headlessui/react";
+import { Dialog, Transition } from "@headlessui/react";
 import { Fragment, useState } from "react";
+import { motion } from "framer-motion";
+import { FaUpload, FaCheck, FaSpinner, FaCode, FaGraduationCap, FaImage } from "react-icons/fa";
 import api from "@/src/lib/axios";
 import LoadingComponent from "./UploadLoadingComponent";
 
@@ -39,6 +41,8 @@ export default function UploadCourseDialog({
     setMessage(msg);
     setTimeout(() => setMessage(null), duration);
   }
+
+
 
   const handleCourseUpload = async () => {
     const formData = new FormData();
@@ -203,176 +207,191 @@ export default function UploadCourseDialog({
 
           <div className="fixed inset-0 overflow-y-auto">
             <div className="flex min-h-full items-center justify-center p-4">
-              <Transition.Child
-                as={Fragment}
-                enter="ease-out duration-300"
-                enterFrom="opacity-0 scale-95"
-                enterTo="opacity-100 scale-100"
-                leave="ease-in duration-200"
-                leaveFrom="opacity-100 scale-100"
-                leaveTo="opacity-0 scale-95"
-              >
-                <Dialog.Panel className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-                  <Dialog.Title className="text-lg font-medium text-gray-900">
-                    Upload Course
-                  </Dialog.Title>
+              <div className="w-full max-w-lg my-8">
+                <Transition.Child
+                  as={Fragment}
+                  enter="ease-out duration-300"
+                  enterFrom="opacity-0 scale-95"
+                  enterTo="opacity-100 scale-100"
+                  leave="ease-in duration-200"
+                  leaveFrom="opacity-100 scale-100"
+                  leaveTo="opacity-0 scale-95"
+                >
+                  <Dialog.Panel className="w-full max-h-[80vh] overflow-y-auto scrollbar-hide rounded-3xl bg-white/90 backdrop-blur-md p-6 pb-12 shadow-2xl border border-white/20">
+                  <div className="text-center mb-4">
+                    <motion.div
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ duration: 0.5 }}
+                      className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 mb-3"
+                    >
+                      <FaGraduationCap className="text-xl text-white" />
+                    </motion.div>
+                    <Dialog.Title className="text-xl font-bold text-gray-900">
+                      Create New Course
+                    </Dialog.Title>
+                    <p className="text-gray-600 text-sm mt-1">Build your learning experience</p>
+                  </div>
 
-                  <div className="mt-4 space-y-4">
+                  <div className="space-y-4">
                     {error && (
-                      <div className="text-red-600 text-sm">{error}</div>
-                    )}
-                    <input
-                      type="text"
-                      placeholder="Course Title"
-                      className="w-full rounded border px-3 py-2"
-                      value={courseTitle}
-                      onChange={(e) => setCourseTitle(e.target.value)}
-                    />
-                    <textarea
-                      placeholder="Description"
-                      className="w-full rounded border px-3 py-2"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                    />
-                    <input
-                      type="number"
-                      min={1}
-                      placeholder="Duration (weeks)"
-                      className="w-full rounded border px-3 py-2"
-                      value={duration}
-                      onChange={(e) => setDuration(Number(e.target.value))}
-                    />
-                    <div>
-                      <label
-                        htmlFor="image-upload"
-                        className="cursor-pointer inline-block text-indigo-600 hover:underline"
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-3 bg-red-50 rounded-lg border border-red-200"
                       >
-                        Choose Image
+                        <div className="text-red-600 text-sm font-medium">{error}</div>
+                      </motion.div>
+                    )}
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Course Title
                       </label>
                       <input
-                        id="image-upload"
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => setImage(e.target.files?.[0] || null)}
-                        className="hidden"
+                        type="text"
+                        placeholder="Enter course title..."
+                        className="w-full rounded-xl border-0 bg-white/80 backdrop-blur-sm px-4 py-3 text-gray-900 placeholder-gray-500 shadow-sm ring-1 ring-gray-300 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-0 transition-all duration-200"
+                        value={courseTitle}
+                        onChange={(e) => setCourseTitle(e.target.value)}
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Description
+                      </label>
+                      <textarea
+                        placeholder="Enter course description..."
+                        rows={3}
+                        className="w-full rounded-xl border-0 bg-white/80 backdrop-blur-sm px-4 py-3 text-gray-900 placeholder-gray-500 shadow-sm ring-1 ring-gray-300 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-0 transition-all duration-200 resize-none"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Duration (weeks)
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        placeholder="Enter duration in weeks..."
+                        className="w-full rounded-xl border-0 bg-white/80 backdrop-blur-sm px-4 py-3 text-gray-900 placeholder-gray-500 shadow-sm ring-1 ring-gray-300 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-0 transition-all duration-200"
+                        value={duration}
+                        onChange={(e) => setDuration(Number(e.target.value))}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Course Image
+                      </label>
+                      <div className="relative">
+                        <label
+                          htmlFor="image-upload"
+                          className="cursor-pointer flex items-center justify-center w-full rounded-xl border-2 border-dashed border-gray-300 bg-white/50 backdrop-blur-sm p-4 text-center hover:border-indigo-400 hover:bg-indigo-50/50 transition-all duration-200"
+                        >
+                          <div className="space-y-1">
+                            <FaImage className="mx-auto text-xl text-gray-400" />
+                            <div className="text-sm text-gray-600">
+                              <span className="font-medium text-indigo-600">Choose an image</span>
+                            </div>
+                            <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                          </div>
+                        </label>
+                        <input
+                          id="image-upload"
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => setImage(e.target.files?.[0] || null)}
+                          className="hidden"
+                        />
+                      </div>
                       {image && (
-                        <p className="mt-2 text-sm text-gray-600">
-                          Selected: {image.name}
-                        </p>
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mt-2 flex items-center gap-2 p-2 bg-green-50 rounded-lg border border-green-200"
+                        >
+                          <FaCheck className="text-green-600 text-sm" />
+                          <span className="text-sm font-medium text-green-800">{image.name}</span>
+                        </motion.div>
                       )}
                     </div>
-                    <div>
-                      <div>
-                        <label className="flex items-center space-x-2 text-sm text-gray-700 mb-2">
-                          <input
-                            type="checkbox"
-                            checked={isProgrammingCourse}
-                            onChange={(e) =>
-                              setIsProgrammingCourse(e.target.checked)
-                            }
-                            className="h-4 w-4 rounded border-gray-300 accent-indigo-600"
-                          />
-                          <span>Include coding tasks?</span>
-                        </label>
-                      </div>
+
+                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-3 border border-indigo-200">
+                      <label className="flex items-center space-x-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isProgrammingCourse}
+                          onChange={(e) => setIsProgrammingCourse(e.target.checked)}
+                          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0"
+                        />
+                        <div className="flex items-center space-x-2">
+                          <FaCode className="text-indigo-600 text-sm" />
+                          <span className="text-sm font-medium text-gray-700">
+                            Include coding tasks
+                          </span>
+                        </div>
+                      </label>
 
                       {isProgrammingCourse && (
-                        <div className="mb-2">
-                          <label className="block mb-1 text-sm font-medium text-gray-700">
-                            Choose Programming Language
+                        <motion.div
+                          initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                          animate={{ opacity: 1, height: "auto", marginTop: 12 }}
+                          exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                          transition={{ duration: 0.4, ease: "easeInOut" }}
+                          className="overflow-hidden"
+                        >
+                          <label className="block mb-2 text-sm font-medium text-gray-700">
+                            Programming Language
                           </label>
-                          <Listbox
+                          <select
                             value={programmingLanguage}
-                            onChange={setProgrammingLanguage}
+                            onChange={(e) => setProgrammingLanguage(e.target.value)}
+                            className="w-full rounded-xl border-0 bg-gradient-to-r from-white/90 to-white/80 backdrop-blur-sm py-2.5 pl-3 pr-8 text-left shadow-sm ring-1 ring-indigo-200 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-0 transition-all duration-200 text-sm text-gray-900 hover:ring-indigo-300 cursor-pointer appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTUgOEwxMCAxM0wxNSA4IiBzdHJva2U9IiM2MzY2RjEiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=')] bg-no-repeat bg-[length:16px] bg-[right_12px_center]"
                           >
-                            <div className="relative">
-                              <Listbox.Button className="relative w-full cursor-pointer rounded border bg-white py-2 pl-3 pr-10 text-left shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm">
-                                <span className="block truncate">
-                                  {programmingLanguage || "Select language"}
-                                </span>
-                              </Listbox.Button>
-                              <Transition
-                                as={Fragment}
-                                leave="transition ease-in duration-100"
-                                leaveFrom="opacity-100"
-                                leaveTo="opacity-0"
-                              >
-                                <Listbox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded  bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm">
-                                  {[
-                                    "JavaScript",
-                                    "Python",
-                                    "Java",
-                                    "C++",
-                                    "TypeScript",
-                                    "SQL",
-                                  ].map((lang) => (
-                                    <Listbox.Option
-                                      key={lang}
-                                      value={lang}
-                                      className={({ active }) =>
-                                        `relative cursor-pointer select-none py-2 pl-10 pr-4 ${
-                                          active
-                                            ? "bg-indigo-100 text-indigo-700"
-                                            : "text-gray-900"
-                                        }`
-                                      }
-                                    >
-                                      {({ selected }) => (
-                                        <>
-                                          <span
-                                            className={`block truncate ${
-                                              selected
-                                                ? "font-medium"
-                                                : "font-normal"
-                                            }`}
-                                          >
-                                            {lang}
-                                          </span>
-                                          {selected && (
-                                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-indigo-600">
-                                              <svg
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                strokeWidth={1.5}
-                                                stroke="currentColor"
-                                                className="size-4"
-                                              >
-                                                <path
-                                                  strokeLinecap="round"
-                                                  strokeLinejoin="round"
-                                                  d="m4.5 12.75 6 6 9-13.5"
-                                                />
-                                              </svg>
-                                            </span>
-                                          )}
-                                        </>
-                                      )}
-                                    </Listbox.Option>
-                                  ))}
-                                </Listbox.Options>
-                              </Transition>
-                            </div>
-                          </Listbox>
-                        </div>
+                            <option value="" className="text-gray-400">Select language</option>
+                            <option value="JavaScript" className="text-gray-900">JavaScript</option>
+                            <option value="Python" className="text-gray-900">Python</option>
+                            <option value="Java" className="text-gray-900">Java</option>
+                            <option value="C++" className="text-gray-900">C++</option>
+                            <option value="TypeScript" className="text-gray-900">TypeScript</option>
+                            <option value="SQL" className="text-gray-900">SQL</option>
+                          </select>
+                        </motion.div>
                       )}
                     </div>
-                    <button
-                      onClick={handleCourseUpload}
-                      className="w-full rounded bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-500"
-                    >
-                      Upload Course
-                    </button>
+
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        onClick={resetAndClose}
+                        className="flex-1 rounded-xl bg-gray-200 px-4 py-2.5 text-gray-700 font-medium hover:bg-gray-300 transition-colors duration-200"
+                      >
+                        Cancel
+                      </button>
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={handleCourseUpload}
+                        disabled={!courseTitle || !description || duration < 1}
+                        className="flex-1 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-2.5 text-white font-medium hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
+                      >
+                        Create Course
+                      </motion.button>
+                    </div>
                   </div>
                 </Dialog.Panel>
               </Transition.Child>
             </div>
           </div>
-        </Dialog>
-      </Transition>
+        </div>
+      </Dialog>
+    </Transition>
 
-      {/* Weeks Modal */}
+          {/* Weeks Modal */}
       <Transition appear show={isWeeksDialogOpen} as={Fragment}>
         <Dialog
           as="div"
@@ -393,46 +412,96 @@ export default function UploadCourseDialog({
 
           <div className="fixed inset-0 overflow-y-auto">
             <div className="flex min-h-full items-center justify-center p-4">
-              <Transition.Child
-                as={Fragment}
-                enter="ease-out duration-300"
-                enterFrom="opacity-0 scale-95"
-                enterTo="opacity-100 scale-100"
-                leave="ease-in duration-200"
-                leaveFrom="opacity-100 scale-100"
-                leaveTo="opacity-0 scale-95"
-              >
-                <Dialog.Panel className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-                  <Dialog.Title className="text-lg font-medium text-gray-900">
-                    Upload Weekly Materials
-                  </Dialog.Title>
-
-                  <div className="mt-4 space-y-2">
-                    {error && (
-                      <div className="text-red-600 text-sm">{error}</div>
-                    )}
-                    {Array.from({ length: weeks }).map((_, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between"
+              <div className="w-full max-w-md my-8">
+                <Transition.Child
+                  as={Fragment}
+                  enter="ease-out duration-300"
+                  enterFrom="opacity-0 scale-95"
+                  enterTo="opacity-100 scale-100"
+                  leave="ease-in duration-200"
+                  leaveFrom="opacity-100 scale-100"
+                  leaveTo="opacity-0 scale-95"
+                >
+                  <Dialog.Panel className="w-full max-h-[80vh] overflow-y-auto scrollbar-hide rounded-3xl bg-white/90 backdrop-blur-md p-6 pb-8 shadow-2xl border border-white/20">
+                    <div className="text-center mb-6">
+                      <motion.div
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ duration: 0.5 }}
+                        className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 mb-3"
                       >
-                        <span>Week {index + 1}</span>
-                        <button
-                          onClick={() => openMaterialUpload(index + 1)}
-                          disabled={uploadedWeeks.has(index + 1)}
-                          className={`rounded px-3 py-1 text-white w-[100px] ${
-                            uploadedWeeks.has(index + 1)
-                              ? "bg-gray-400 cursor-not-allowed"
-                              : "bg-indigo-500 hover:bg-indigo-400"
-                          }`}
+                        <FaUpload className="text-xl text-white" />
+                      </motion.div>
+                      <Dialog.Title className="text-xl font-bold text-gray-900">
+                        Upload Weekly Materials
+                      </Dialog.Title>
+                      <p className="text-gray-600 text-sm mt-1">Add content to each week of your course</p>
+                    </div>
+
+                    <div className="space-y-3">
+                      {error && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="p-3 bg-red-50 rounded-lg border border-red-200"
                         >
-                          {uploadedWeeks.has(index + 1) ? "Uploaded" : "Upload"}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </Dialog.Panel>
-              </Transition.Child>
+                          <div className="text-red-600 text-sm font-medium">{error}</div>
+                        </motion.div>
+                      )}
+                      
+                      {Array.from({ length: weeks }).map((_, index) => (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200 hover:border-indigo-300 transition-all duration-200"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-600">
+                              <span className="text-sm font-semibold">{index + 1}</span>
+                            </div>
+                            <span className="font-medium text-gray-800">Week {index + 1}</span>
+                          </div>
+                          
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => openMaterialUpload(index + 1)}
+                            disabled={uploadedWeeks.has(index + 1)}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-200 shadow-sm ${
+                              uploadedWeeks.has(index + 1)
+                                ? "bg-green-100 text-green-700 cursor-not-allowed border border-green-200"
+                                : "bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 shadow-lg hover:shadow-xl"
+                            }`}
+                          >
+                            {uploadedWeeks.has(index + 1) ? (
+                              <>
+                                <FaCheck className="text-sm" />
+                                <span>Uploaded</span>
+                              </>
+                            ) : (
+                              <>
+                                <FaUpload className="text-sm" />
+                                <span>Upload</span>
+                              </>
+                            )}
+                          </motion.button>
+                        </motion.div>
+                      ))}
+                    </div>
+                    
+                    <div className="mt-6 pt-4 border-t border-gray-200">
+                      <button
+                        onClick={() => setWeeksDialogOpen(false)}
+                        className="w-full rounded-xl bg-gray-200 px-4 py-2.5 text-gray-700 font-medium hover:bg-gray-300 transition-colors duration-200"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </Dialog.Panel>
+                </Transition.Child>
+              </div>
             </div>
           </div>
         </Dialog>
@@ -459,87 +528,152 @@ export default function UploadCourseDialog({
 
           <div className="fixed inset-0 overflow-y-auto">
             <div className="flex min-h-full items-center justify-center p-4">
-              <Transition.Child
-                as={Fragment}
-                enter="ease-out duration-300"
-                enterFrom="opacity-0 scale-95"
-                enterTo="opacity-100 scale-100"
-                leave="ease-in duration-200"
-                leaveFrom="opacity-100 scale-100"
-                leaveTo="opacity-0 scale-95"
-              >
-                {isLoading ? (
-                  // ⏳ Show loading spinner
-                  <LoadingComponent message={loadingMessage} />
-                ) : (
-                  <Dialog.Panel className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-                    <Dialog.Title className="text-lg font-medium text-gray-900">
-                      Upload Material for Week {selectedWeek}
-                    </Dialog.Title>
-                    <input
-                      type="text"
-                      placeholder="Material Title"
-                      className="w-full mt-4 rounded border px-3 py-2"
-                      value={materialTitle}
-                      onChange={(e) => setMaterialTitle(e.target.value)}
-                    />
-                    <textarea
-                      placeholder="Material Description"
-                      className="w-full mt-4 mb-2 rounded border px-3 py-2"
-                      value={materialDescription}
-                      onChange={(e) => setMaterialDescription(e.target.value)}
-                    />
+              <div className="w-full max-w-md my-8">
+                <Transition.Child
+                  as={Fragment}
+                  enter="ease-out duration-300"
+                  enterFrom="opacity-0 scale-95"
+                  enterTo="opacity-100 scale-100"
+                  leave="ease-in duration-200"
+                  leaveFrom="opacity-100 scale-100"
+                  leaveTo="opacity-0 scale-95"
+                >
+                  {isLoading ? (
+                    // ⏳ Show loading spinner
+                    <LoadingComponent message={loadingMessage} />
+                  ) : (
+                    <Dialog.Panel className="w-full max-h-[80vh] overflow-y-auto scrollbar-hide rounded-3xl bg-white/90 backdrop-blur-md p-6 pb-8 shadow-2xl border border-white/20">
+                      <div className="text-center mb-6">
+                        <motion.div
+                          initial={{ scale: 0.8, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ duration: 0.5 }}
+                          className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 mb-3"
+                        >
+                          <FaUpload className="text-xl text-white" />
+                        </motion.div>
+                        <Dialog.Title className="text-xl font-bold text-gray-900">
+                          Upload Material for Week {selectedWeek}
+                        </Dialog.Title>
+                        <p className="text-gray-600 text-sm mt-1">Add learning materials and generate content</p>
+                      </div>
 
-                    <div className="mt-4 mb-4">
-                      <label className="flex items-center space-x-2 text-md text-gray-700 mb-2">
-                        <input
-                          type="checkbox"
-                          checked={isCodeGeneration}
-                          onChange={(e) =>
-                            setIsCodeGeneration(e.target.checked)
-                          }
-                          className="h-4 w-4 rounded border-gray-300 accent-indigo-600"
-                        />
-                        <span>Gernerate coding tasks?</span>
-                      </label>
-                    </div>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Material Title
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Enter material title..."
+                            className="w-full rounded-xl border-0 bg-white/80 backdrop-blur-sm px-4 py-3 text-gray-900 placeholder-gray-500 shadow-sm ring-1 ring-gray-300 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-0 transition-all duration-200"
+                            value={materialTitle}
+                            onChange={(e) => setMaterialTitle(e.target.value)}
+                          />
+                        </div>
 
-                    <label
-                      htmlFor="material-upload"
-                      className="cursor-pointer inline-block text-indigo-600 hover:underline"
-                    >
-                      Choose File
-                    </label>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Material Description
+                          </label>
+                          <textarea
+                            placeholder="Enter material description..."
+                            rows={3}
+                            className="w-full rounded-xl border-0 bg-white/80 backdrop-blur-sm px-4 py-3 text-gray-900 placeholder-gray-500 shadow-sm ring-1 ring-gray-300 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-0 transition-all duration-200 resize-none"
+                            value={materialDescription}
+                            onChange={(e) => setMaterialDescription(e.target.value)}
+                          />
+                        </div>
 
-                    <input
-                      id="material-upload"
-                      type="file"
-                      accept=".txt,.pdf,.doc,.docx"
-                      onChange={(e) => setMaterial(e.target.files?.[0] || null)}
-                      className="hidden"
-                    />
-                    {material && (
-                      <p className="mt-2 text-sm text-gray-600">
-                        Selected: {material.name}
-                      </p>
-                    )}
-                    <div className="mt-6">
-                      {error && (
-                        <div className="text-red-600 text-sm mb-2">{error}</div>
-                      )}
-                      <button
-                        onClick={async () => {
-                          await handleWeekUpload();
-                          await handleMaterialUpload();
-                        }}
-                        className="w-full rounded bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-500"
-                      >
-                        Upload Material
-                      </button>
-                    </div>
-                  </Dialog.Panel>
-                )}
-              </Transition.Child>
+                        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-3 border border-indigo-200">
+                          <label className="flex items-center space-x-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={isCodeGeneration}
+                              onChange={(e) => setIsCodeGeneration(e.target.checked)}
+                              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0"
+                            />
+                            <div className="flex items-center space-x-2">
+                              <FaCode className="text-indigo-600 text-sm" />
+                              <span className="text-sm font-medium text-gray-700">
+                                Generate coding tasks automatically
+                              </span>
+                            </div>
+                          </label>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Upload File
+                          </label>
+                          <div className="relative">
+                            <label
+                              htmlFor="material-upload"
+                              className="cursor-pointer flex items-center justify-center w-full rounded-xl border-2 border-dashed border-gray-300 bg-white/50 backdrop-blur-sm p-4 text-center hover:border-indigo-400 hover:bg-indigo-50/50 transition-all duration-200"
+                            >
+                              <div className="space-y-1">
+                                <FaUpload className="mx-auto text-xl text-gray-400" />
+                                <div className="text-sm text-gray-600">
+                                  <span className="font-medium text-indigo-600">Choose a file</span>
+                                </div>
+                                <p className="text-xs text-gray-500">PDF, DOC, DOCX, TXT up to 10MB</p>
+                              </div>
+                            </label>
+                            <input
+                              id="material-upload"
+                              type="file"
+                              accept=".txt,.pdf,.doc,.docx"
+                              onChange={(e) => setMaterial(e.target.files?.[0] || null)}
+                              className="hidden"
+                            />
+                          </div>
+                          {material && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="mt-2 flex items-center gap-2 p-2 bg-green-50 rounded-lg border border-green-200"
+                            >
+                              <FaCheck className="text-green-600 text-sm" />
+                              <span className="text-sm font-medium text-green-800">{material.name}</span>
+                            </motion.div>
+                          )}
+                        </div>
+
+                        {error && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="p-3 bg-red-50 rounded-lg border border-red-200"
+                          >
+                            <div className="text-red-600 text-sm font-medium">{error}</div>
+                          </motion.div>
+                        )}
+
+                        <div className="flex gap-3 pt-2">
+                          <button
+                            onClick={() => setMaterialDialogOpen(false)}
+                            className="flex-1 rounded-xl bg-gray-200 px-4 py-2.5 text-gray-700 font-medium hover:bg-gray-300 transition-colors duration-200"
+                          >
+                            Cancel
+                          </button>
+                          <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={async () => {
+                              await handleWeekUpload();
+                              await handleMaterialUpload();
+                            }}
+                            disabled={!material || !materialTitle}
+                            className="flex-1 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-2.5 text-white font-medium hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
+                          >
+                            Upload Material
+                          </motion.button>
+                        </div>
+                      </div>
+                    </Dialog.Panel>
+                  )}
+                </Transition.Child>
+              </div>
             </div>
           </div>
         </Dialog>
