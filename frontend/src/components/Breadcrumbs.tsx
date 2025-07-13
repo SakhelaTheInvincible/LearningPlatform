@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRightIcon } from "@heroicons/react/24/solid";
+import { motion } from "framer-motion";
+import { FaHome, FaChevronRight } from "react-icons/fa";
 
 export default function Breadcrumbs() {
   const pathname = usePathname();
@@ -28,34 +29,63 @@ export default function Breadcrumbs() {
   }
 
   return (
-    <nav
-      className="text-sm text-gray-500 flex items-center space-x-2"
+    <motion.nav
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg p-4 border border-white/20"
       aria-label="Breadcrumb"
     >
-      <Link href="/" className="hover:underline text-indigo-600">
-        Home
-      </Link>
+      <div className="flex items-center space-x-2 text-sm">
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <Link 
+            href="/" 
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 transition-all duration-200 font-medium"
+          >
+            <FaHome className="text-sm" />
+            Home
+          </Link>
+        </motion.div>
 
-      {crumbs.map((crumb, index) => {
-        const isLast = index === crumbs.length - 1;
+        {crumbs.map((crumb, index) => {
+          const isLast = index === crumbs.length - 1;
 
-        return (
-          <div key={crumb.href} className="flex items-center space-x-2">
-            <ChevronRightIcon className="h-4 w-4 text-gray-400" />
-            {isLast ? (
-              <span className="text-gray-800 font-medium">{crumb.label}</span>
-            ) : (
-              <Link
-                href={crumb.href}
-                className="hover:underline text-indigo-600"
-              >
-                {crumb.label}
-              </Link>
-            )}
-          </div>
-        );
-      })}
-    </nav>
+          return (
+            <div key={crumb.href} className="flex items-center space-x-2">
+              <FaChevronRight className="text-gray-400 text-xs" />
+              {isLast ? (
+                <motion.span 
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                  className="px-3 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold shadow-lg"
+                >
+                  {crumb.label}
+                </motion.span>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Link
+                    href={crumb.href}
+                    className="px-3 py-2 rounded-xl text-gray-600 hover:text-indigo-600 hover:bg-gray-50 transition-all duration-200 font-medium"
+                  >
+                    {crumb.label}
+                  </Link>
+                </motion.div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </motion.nav>
   );
 }
 

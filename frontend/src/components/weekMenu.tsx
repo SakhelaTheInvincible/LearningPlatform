@@ -93,7 +93,7 @@ const WeekMenu = forwardRef<WeekMenuHandle, WeekDropdownProps>(
 
     return (
       <div
-        className={`bg-white h-full h-screen max-w-[240px] flex flex-col border border-indigo-600 border-l-transparent border-t-transparent ${
+        className={`bg-white h-screen max-w-[240px] flex flex-col border border-indigo-600 border-l-transparent border-t-transparent ${
           open ? "w-64" : "w-16"
         } transition-all duration-300`}
       >
@@ -122,16 +122,18 @@ const WeekMenu = forwardRef<WeekMenuHandle, WeekDropdownProps>(
               <Link
                 key={part.slug}
                 href={`${basePath}/${part.slug}`}
-                className={`py-2 flex items-center text-sm text-indigo-600 hover:text-indigo-800 hover:bg-gray-200 transition-colors p-2 rounded-xs border-l-4 ${
+                className={`py-2 flex items-center text-sm transition-colors p-2 rounded-xs border-l-4 ${
                   currentMaterial === part.slug
                     ? "border-indigo-600 bg-gray-200"
-                    : "border-transparent hover:border-indigo-600"
+                    : part.completed
+                    ? "border-green-500 bg-green-50 hover:bg-green-100 text-green-700"
+                    : "border-transparent hover:border-indigo-600 text-indigo-600 hover:text-indigo-800 hover:bg-gray-200"
                 }`}
               >
                 {getIcon(part.type, part.completed)}
                 <div className="ml-3">
-                  <div>{part.name}</div>
-                  <div className="text-gray-700">{part.description}</div>
+                  <div className={part.completed ? "font-medium" : ""}>{part.name}</div>
+                  <div className={part.completed ? "text-green-600" : "text-gray-700"}>{part.description}</div>
                 </div>
               </Link>
             ))}

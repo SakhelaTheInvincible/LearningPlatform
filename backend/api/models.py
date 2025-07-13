@@ -93,6 +93,10 @@ class Course(models.Model):
             # to prevent recursion from update_difficulty
             if kwargs.get('update_fields') == ['difficulty']:
                 return super().save(*args, **kwargs)
+            # Allow saving specific fields including is_completed
+            if kwargs.get('update_fields'):
+                return super().save(*args, **kwargs)
+            # Default save with title_slug update only
             return super().save(update_fields=['title_slug'])
 
     def __str__(self):
@@ -179,9 +183,13 @@ class Week(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        incomplete_weeks = self.course.weeks.filter(is_completed=False).count()
-        self.course.is_completed = (incomplete_weeks == 0)
-        self.course.save()
+        # Only auto-complete course if it's not already manually completed
+        # This prevents overriding manual completion and XP awards
+        if not self.course.is_completed:
+            incomplete_weeks = self.course.weeks.filter(is_completed=False).count()
+            if incomplete_weeks == 0:
+                self.course.is_completed = True
+                self.course.save()
 
     def __str__(self):
         return f"Week {self.week_number} of {self.course.title}"
@@ -212,7 +220,9 @@ class Material(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        self.week.save()
+        # Only trigger week completion check if course isn't already manually completed
+        if not self.week.course.is_completed:
+            self.week.save()
 
 
 class Question(models.Model):
@@ -268,11 +278,11 @@ class Quiz(models.Model):
     ]
 
     PASSING_THRESHOLD = [
-        ('N', 50),
-        ('M', 60),
+        ('N', 80),
+        ('M', 75),
         ('S', 70),
-        ('I', 80),
-        ('A', 85),
+        ('I', 65),
+        ('A', 55),
     ]
 
     week = models.ForeignKey(

@@ -157,37 +157,7 @@ export default function LeetCodeEditor({
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex justify-between items-center px-4 py-2 bg-[#252526] border-b border-gray-700">
-        <div className="flex items-center gap-2">
-          <div className="">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="size-6 text-indigo-500"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5"
-              />
-            </svg>
-          </div>
-          <h2 className="text-sm font-semibold text-gray-200">Code</h2>
-        </div>
-        <button
-          onClick={handleRun}
-          className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 px-4 py-1.5 rounded text-sm font-medium disabled:opacity-50"
-          disabled={isLoading}
-        >
-          {isLoading ? "Running..." : "Run"}
-        </button>
-      </div>
-
-      {/* Language Selector */}
+      {/* Language Selector and Controls */}
       <div className="flex flex-row justify-between px-4 py-2 bg-[#1e1e1e] border-b border-gray-700">
         <Listbox value={selectedLanguage} onChange={setSelectedLanguage}>
           <div className="relative mt-1 w-48">
@@ -239,15 +209,19 @@ export default function LeetCodeEditor({
             </Transition>
           </div>
         </Listbox>
-        <div className="mt-2">
-          <button className="cursor-pointer" onClick={handleRefreshCode}>
+        <div className="flex items-center gap-2 mt-2">
+          <button 
+            className="cursor-pointer" 
+            onClick={handleRefreshCode}
+            title="Reset code to template"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
               strokeWidth={1.5}
               stroke="currentColor"
-              className="size-6 text-indigo-500"
+              className="size-6 text-indigo-500 hover:text-indigo-400"
             >
               <path
                 strokeLinecap="round"
@@ -255,6 +229,13 @@ export default function LeetCodeEditor({
                 d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
               />
             </svg>
+          </button>
+          <button
+            onClick={handleRun}
+            className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 px-4 py-1.5 rounded text-sm font-medium disabled:opacity-50"
+            disabled={isLoading}
+          >
+            {isLoading ? "Running..." : "Run"}
           </button>
         </div>
       </div>

@@ -326,7 +326,7 @@ class CourseViewSet(mixins.CreateModelMixin,
             course = self.get_object()
             was_completed = course.is_completed
             course.is_completed = is_completed
-            course.save()
+            course.save(update_fields=['is_completed'])
 
             # Update user_exp if course is newly completed
             if is_completed and not was_completed:
@@ -365,7 +365,7 @@ class CourseViewSet(mixins.CreateModelMixin,
             # Quiz completed: intermediate quiz score >= 80
             quiz_completed = False
             intermediate_quiz = week.quizzes.filter(difficulty='I').first()
-            if intermediate_quiz and intermediate_quiz.user_score >= 80:
+            if intermediate_quiz and intermediate_quiz.user_score >= 65:
                 quiz_completed = True
 
             # Code completed: all easy (score >= 90) and all medium (score >= 75)
@@ -486,7 +486,7 @@ class WeekViewSet(mixins.CreateModelMixin,
         # Quiz completed: intermediate quiz score >= 80
         quiz_completed = False
         intermediate_quiz = week.quizzes.filter(difficulty='I').first()
-        if intermediate_quiz and intermediate_quiz.user_score >= 80:
+        if intermediate_quiz and intermediate_quiz.user_score >= 65:
             quiz_completed = True
 
         # Code completed: all easy (score >= 90) and all medium (score >= 75)
